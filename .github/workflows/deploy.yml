@@ -29,7 +29,7 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          flutter-version: '3.32.8'
           cache: true
 
       - name: Build Flutter Web (WASM)
@@ -50,22 +50,22 @@ jobs:
         id: deployment
 
   # ────────────────────────────────────────────────────────────────
-  # Job 2: Build Dart Server → Deploy to VPS.
+  # Job 2: Build Dart Server → Deploy to VPS
   # ────────────────────────────────────────────────────────────────
   deploy-server:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
 
-      - name: Setup Dart SDK
-        uses: dart-lang/setup-dart@v1
+      - uses: subosito/flutter-action@v2
         with:
-          sdk: stable
+          flutter-version: '3.32.8'
+          cache: true
 
       - name: Compile Serverpod server
         working-directory: family_chat_sp_server
         run: |
-          dart pub get
+          flutter pub get
           dart compile exe bin/main.dart -o family_chat_server_bin
 
       - name: Patch production.yaml
@@ -84,7 +84,6 @@ jobs:
             mkdir -p ~/family_chat/config
             mkdir -p ~/family_chat/migrations
 
-      # Write Serverpod passwords.yaml from GitHub Secrets (never committed to git)
       - name: Write passwords config on VPS
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -97,35 +96,4 @@ jobs:
               database: '${{ secrets.DB_PASSWORD }}'
               serviceSecret: '${{ secrets.SERVICE_SECRET }}'
               emailSecretHashPepper: '${{ secrets.EMAIL_PEPPER }}'
-              jwtHmacSha512PrivateKey: '${{ secrets.JWT_PRIVATE_KEY }}'
-              jwtRefreshTokenHashPepper: '${{ secrets.JWT_REFRESH_PEPPER }}'
-            YAML
-            chmod 600 ~/family_chat/config/passwords.yaml
-
-      # Copy compiled binary + production config + migrations
-      - name: Copy artifacts to VPS
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.VPS_IP }}
-          username: deploy
-          key: ${{ secrets.VPS_SERVER_KEY }}
-          source: >-
-            family_chat_sp_server/family_chat_server_bin,
-            family_chat_sp_server/config/production.yaml,
-            family_chat_sp_server/migrations/
-          target: ~/family_chat/
-          strip_components: 1
-
-      # Restart systemd service (applies new migrations on startup via --apply-migrations)
-      - name: Restart server
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.VPS_IP }}
-          username: deploy
-          key: ${{ secrets.VPS_SERVER_KEY }}
-          script: |
-            chmod +x ~/family_chat/family_chat_server_bin
-            sudo systemctl restart family-chat
-            sleep 5
-            sudo systemctl status family-chat --no-pager -l
-            sudo journalctl -u family-chat -n 100 --no-pager
+              jwtHmacSha512PrivateKey: '${{ secrets.JWT_PRIVATE_KEY
