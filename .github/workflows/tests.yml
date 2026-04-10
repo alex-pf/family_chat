@@ -15,7 +15,7 @@ jobs:
       SERVERPOD_PASSWORD_redis: 'z1mksT3pQhFVuwKVrc2IRaDZx6vCaF_z'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: subosito/flutter-action@v2
         with:
