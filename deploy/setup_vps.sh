@@ -24,31 +24,32 @@ echo 'deb [signed-by=/usr/share/keyrings/dart.gpg arch=amd64] https://storage.go
 apt-get update
 apt-get install -y dart
 
-# 3. Создать пользователя deploy
-echo "--- [3/9] Creating deploy user ---"
-useradd -m -s /bin/bash deploy || echo "User 'deploy' already exists"
-mkdir -p /home/deploy/.ssh
+# 3. Создать пользователя devuser
+echo "--- [3/9] Creating devuser user ---"
+useradd -m -s /bin/bash devuser || echo "User 'devuser' already exists"
 
-# ВАЖНО: Добавьте публичный ключ (тот, чей приватный хранится в GitHub Secret VPS_SERVER_KEY)
-# echo "YOUR_PUBLIC_KEY_HERE" >> /home/deploy/.ssh/authorized_keys
+DEV_HOME=$(getent passwd devuser | cut -d: -f6)
 
-chmod 700 /home/deploy/.ssh
-touch /home/deploy/.ssh/authorized_keys
-chmod 600 /home/deploy/.ssh/authorized_keys
-chown -R deploy:deploy /home/deploy/.ssh
-echo "  => deploy user created. Add your public key to /home/deploy/.ssh/authorized_keys!"
+mkdir -p "$DEV_HOME/.ssh"
+touch "$DEV_HOME/.ssh/authorized_keys"
+chmod 700 "$DEV_HOME/.ssh"
+chmod 600 "$DEV_HOME/.ssh/authorized_keys"
+chown -R devuser:devuser "$DEV_HOME/.ssh"
+
+echo "  => devuser user ready. Add your public key to $DEV_HOME/.ssh/authorized_keys!"
+echo ""
 
 # 4. Создать директории приложения
 echo "--- [4/9] Creating application directories ---"
 mkdir -p /opt/family_chat/config
 mkdir -p /opt/family_chat/data
 mkdir -p /opt/family_chat/migrations
-chown -R deploy:deploy /opt/family_chat
+chown -R devuser:devuser /opt/family_chat
 
-# Разрешить deploy перезапускать сервис без пароля sudo
-echo "deploy ALL=(ALL) NOPASSWD: /bin/systemctl restart family-chat, /bin/systemctl status family-chat, /bin/systemctl start family-chat, /bin/systemctl stop family-chat" \
-  > /etc/sudoers.d/deploy-family-chat
-chmod 440 /etc/sudoers.d/deploy-family-chat
+# Разрешить devuser перезапускать сервис без пароля sudo
+echo "devuser ALL=(ALL) NOPASSWD: /bin/systemctl restart family-chat, /bin/systemctl status family-chat, /bin/systemctl start family-chat, /bin/systemctl stop family-chat" \
+  > /etc/sudoers.d/devuser-family-chat
+chmod 440 /etc/sudoers.d/devuser-family-chat
 
 # 5. Настроить PostgreSQL
 echo "--- [5/9] Configuring PostgreSQL ---"
@@ -106,7 +107,7 @@ maxRequestSize: 25165824  # 24 MB
 sessionLogs:
   consoleEnabled: true
 EOF
-chown deploy:deploy /opt/family_chat/config/production.yaml
+chown devuser:devuser /opt/family_chat/config/production.yaml
 echo "  => /opt/family_chat/config/production.yaml created"
 
 # 7. Создать placeholder passwords.yaml (будет перезаписан CI/CD)
@@ -121,7 +122,7 @@ production:
   jwtHmacSha512PrivateKey: 'PLACEHOLDER_SET_BY_CICD'
   jwtRefreshTokenHashPepper: 'PLACEHOLDER_SET_BY_CICD'
 EOF
-chown deploy:deploy /opt/family_chat/config/passwords.yaml
+chown devuser:devuser /opt/family_chat/config/passwords.yaml
 chmod 600 /opt/family_chat/config/passwords.yaml
 
 # 8. Создать systemd service
@@ -134,7 +135,7 @@ Wants=postgresql.service
 
 [Service]
 Type=simple
-User=deploy
+User=devuser
 WorkingDirectory=/opt/family_chat
 ExecStart=/opt/family_chat/family_chat_server_bin --mode production --apply-migrations
 Restart=always
@@ -220,8 +221,8 @@ echo "============================================"
 echo ""
 echo "Remaining manual steps:"
 echo ""
-echo "1. Add your SSH public key to /home/deploy/.ssh/authorized_keys"
-echo "   (The private key must match GitHub Secret VPS_SERVER_KEY)"
+echo "1. Add your SSH public key to $DEV_HOME/.ssh/authorized_keys"
+echo "   (The private key must match GitHub Secret VPS_SERVER_KEY_DEVUSER)"
 echo ""
 echo "2. Set admin credentials in systemd service (for first run):"
 echo "   Edit /etc/systemd/system/family-chat.service"
@@ -233,14 +234,14 @@ echo "3. Get SSL certificate:"
 echo "   certbot --nginx -d $DOMAIN"
 echo ""
 echo "4. Add GitHub Secrets in your repository settings:"
-echo "   DB_PASSWORD     = $DB_PASS"
-echo "   SERVICE_SECRET  = (generate: openssl rand -hex 32)"
-echo "   EMAIL_PEPPER    = (generate: openssl rand -hex 32)"
-echo "   JWT_PRIVATE_KEY = (generate: openssl rand -hex 64)"
+echo "   DB_PASSWORD        = $DB_PASS"
+echo "   SERVICE_SECRET     = (generate: openssl rand -hex 32)"
+echo "   EMAIL_PEPPER       = (generate: openssl rand -hex 32)"
+echo "   JWT_PRIVATE_KEY    = (generate: openssl rand -hex 64)"
 echo "   JWT_REFRESH_PEPPER = (generate: openssl rand -hex 32)"
 echo ""
 echo "5. Push to main branch to trigger first deployment via GitHub Actions"
 echo ""
 echo "6. After first successful login as Admin:"
-echo "   bash /path/to/deploy/update_admin_env.sh"
+echo "   bash /path/to/devuser/update_admin_env.sh"
 echo ""
