@@ -1,0 +1,5 @@
+class: FileDeletionPreview
+fields:
+  totalBytes: int
+  fileCount: int
+  oldestFileDate: DateTime?

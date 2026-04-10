@@ -1,0 +1,11 @@
+class: MessageStatus
+table: message_statuses
+fields:
+  messageId: int
+  userId: int
+  status: String
+  updatedAt: DateTime
+indexes:
+  msg_status_unique:
+    fields: messageId, userId
+    unique: true

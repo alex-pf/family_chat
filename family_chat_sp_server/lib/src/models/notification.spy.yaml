@@ -1,0 +1,13 @@
+class: AppNotification
+table: app_notifications
+fields:
+  recipientUserId: int
+  type: String
+  title: String
+  body: String
+  relatedEntityId: int?
+  isRead: bool, default=false
+  createdAt: DateTime
+indexes:
+  notif_recipient_idx:
+    fields: recipientUserId, isRead

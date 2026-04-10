@@ -1,0 +1,19 @@
+class: AppUser
+table: app_users
+fields:
+  serverpodUserId: String?  # UUID of the Serverpod AuthUser
+  email: String
+  name: String
+  avatarColor: String
+  avatarInitials: String
+  isBlocked: bool, default=false
+  mustChangePassword: bool, default=false
+  createdAt: DateTime
+  lastSeenAt: DateTime?
+indexes:
+  app_user_email_idx:
+    fields: email
+    unique: true
+  app_user_spid_idx:
+    fields: serverpodUserId
+    unique: true

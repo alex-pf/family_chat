@@ -1,0 +1,11 @@
+class: Chat
+table: chats
+fields:
+  name: String
+  isGroup: bool, default=false
+  ownerUserId: int?
+  backgroundId: String, default='default'
+  textColor: String, default='#FFFFFF'
+  isArchived: bool, default=false
+  createdAt: DateTime
+  updatedAt: DateTime

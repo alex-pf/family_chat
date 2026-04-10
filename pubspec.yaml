@@ -1,0 +1,11 @@
+name: _
+publish_to: none
+
+environment:
+  sdk: '^3.8.0'
+
+workspace:
+  - family_chat_sp_client
+  - family_chat_sp_server
+  - family_chat_sp_flutter
+

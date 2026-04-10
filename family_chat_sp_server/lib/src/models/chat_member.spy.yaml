@@ -1,0 +1,15 @@
+class: ChatMember
+table: chat_members
+fields:
+  chatId: int
+  userId: int
+  joinedAt: DateTime
+  lastReadMessageId: int?
+indexes:
+  chat_member_unique:
+    fields: chatId, userId
+    unique: true
+  chat_member_chat_idx:
+    fields: chatId
+  chat_member_user_idx:
+    fields: userId

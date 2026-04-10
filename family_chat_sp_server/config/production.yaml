@@ -1,0 +1,48 @@
+# Production configuration for FamilyChat.
+# nginx on the VPS terminates TLS and proxies to the local ports below.
+# Replace DOMAIN_PLACEHOLDER with your actual domain before deploying.
+
+# Configuration for the main API server.
+apiServer:
+  port: 8080
+  publicHost: DOMAIN_PLACEHOLDER
+  publicPort: 443
+  publicScheme: https
+
+# Configuration for the Insights server.
+insightsServer:
+  port: 8081
+  publicHost: DOMAIN_PLACEHOLDER
+  publicPort: 443
+  publicScheme: https
+
+# Configuration for the web server.
+webServer:
+  port: 8082
+  publicHost: DOMAIN_PLACEHOLDER
+  publicPort: 443
+  publicScheme: https
+
+# Database configuration.
+# Set actual credentials via env variables or passwords.yaml on the server.
+database:
+  host: localhost
+  port: 5432
+  name: family_chat
+  user: postgres
+  requireSsl: false
+  #maxConnectionCount: 10
+
+# Redis – enable for horizontal scaling (message bus across instances).
+redis:
+  enabled: false
+  host: localhost
+  port: 6379
+
+maxRequestSize: 524288 # 512 KB default; adjust for file uploads
+
+sessionLogs:
+  consoleEnabled: false
+  # persistentEnabled: true
+
+# futureCallExecutionEnabled: true

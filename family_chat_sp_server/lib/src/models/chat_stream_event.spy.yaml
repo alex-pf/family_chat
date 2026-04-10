@@ -1,0 +1,7 @@
+class: ChatStreamEvent
+fields:
+  type: String
+  chatId: int
+  message: ChatMessage?
+  reaction: MessageReaction?
+  userId: int?

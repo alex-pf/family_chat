@@ -1,0 +1,44 @@
+services:
+  # Development services
+  postgres:
+    image: pgvector/pgvector:pg16
+    ports:
+      - "8090:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: family_chat_sp
+      POSTGRES_PASSWORD: "P6wSLVEmWHtz7Wu7w0w9II7Z50Noipeh"
+    volumes:
+      - family_chat_sp_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:6.2.6
+    ports:
+      - "8091:6379"
+    command: redis-server --requirepass "aVpgZBo8CPgbOae0poGUasPYGuk6BXdP"
+    environment:
+      - REDIS_REPLICATION_MODE=master
+
+  # Test services
+  postgres_test:
+    image: pgvector/pgvector:pg16
+    ports:
+      - "9090:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: family_chat_sp_test
+      POSTGRES_PASSWORD: "3IcAI7Pbfp_o1oJV5XQZXESDp8UdCkok"
+    volumes:
+      - family_chat_sp_test_data:/var/lib/postgresql/data
+
+  redis_test:
+    image: redis:6.2.6
+    ports:
+      - "9091:6379"
+    command: redis-server --requirepass "z1mksT3pQhFVuwKVrc2IRaDZx6vCaF_z"
+    environment:
+      - REDIS_REPLICATION_MODE=master
+
+volumes:
+  family_chat_sp_data:
+  family_chat_sp_test_data:

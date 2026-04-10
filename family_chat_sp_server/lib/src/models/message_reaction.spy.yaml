@@ -1,0 +1,11 @@
+class: MessageReaction
+table: message_reactions
+fields:
+  messageId: int
+  userId: int
+  emoji: String
+  createdAt: DateTime
+indexes:
+  reaction_unique:
+    fields: messageId, userId, emoji
+    unique: true

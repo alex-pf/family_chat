@@ -1,0 +1,9 @@
+class: ChatListItem
+fields:
+  chatId: int
+  name: String
+  lastMessage: String?
+  lastMessageTime: DateTime?
+  unreadCount: int
+  isGroup: bool
+  avatarColor: String?

@@ -1,0 +1,122 @@
+name: Deploy FamilyChat
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "deploy"
+  cancel-in-progress: false
+
+jobs:
+  # ────────────────────────────────────────────────────────────────
+  # Job 1: Build Flutter Web → GitHub Pages
+  # ────────────────────────────────────────────────────────────────
+  deploy-flutter-web:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Build Flutter Web (WASM)
+        working-directory: family_chat_sp_flutter
+        run: |
+          flutter pub get
+          flutter build web \
+            --base-href /family_chat/ \
+            --wasm \
+            --dart-define=SERVER_URL=https://${{ secrets.SERVER_DOMAIN }}
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: family_chat_sp_flutter/build/web
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
+        id: deployment
+
+  # ────────────────────────────────────────────────────────────────
+  # Job 2: Build Dart Server → Deploy to VPS
+  # ────────────────────────────────────────────────────────────────
+  deploy-server:
+    runs-on: ubuntu-latest
+    # Runs in parallel with deploy-flutter-web
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Dart SDK
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+
+      - name: Compile Serverpod server
+        working-directory: family_chat_sp_server
+        run: |
+          dart pub get
+          dart compile exe bin/main.dart -o family_chat_server_bin
+
+      # Write Serverpod passwords.yaml from GitHub Secrets (never committed to git)
+      - name: Write passwords config on VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_IP }}
+          username: deploy
+          key: ${{ secrets.VPS_SERVER_KEY }}
+          script: |
+            mkdir -p /opt/family_chat/config
+            cat > /opt/family_chat/config/passwords.yaml << 'YAML'
+            production:
+              database: '${{ secrets.DB_PASSWORD }}'
+              serviceSecret: '${{ secrets.SERVICE_SECRET }}'
+              emailSecretHashPepper: '${{ secrets.EMAIL_PEPPER }}'
+              jwtHmacSha512PrivateKey: '${{ secrets.JWT_PRIVATE_KEY }}'
+              jwtRefreshTokenHashPepper: '${{ secrets.JWT_REFRESH_PEPPER }}'
+            YAML
+            chmod 600 /opt/family_chat/config/passwords.yaml
+
+      # Patch production.yaml with real domain before uploading
+      - name: Patch production.yaml
+        working-directory: family_chat_sp_server
+        run: |
+          sed -i "s/DOMAIN_PLACEHOLDER/${{ secrets.SERVER_DOMAIN }}/g" config/production.yaml
+
+      # Copy compiled binary + production config + migrations
+      - name: Copy artifacts to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_IP }}
+          username: deploy
+          key: ${{ secrets.VPS_SERVER_KEY }}
+          source: >-
+            family_chat_sp_server/family_chat_server_bin,
+            family_chat_sp_server/config/production.yaml,
+            family_chat_sp_server/migrations/
+          target: /opt/family_chat/
+          strip_components: 1
+
+      # Restart systemd service (applies new migrations on startup via --apply-migrations)
+      - name: Restart server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_IP }}
+          username: deploy
+          key: ${{ secrets.VPS_SERVER_KEY }}
+          script: |
+            chmod +x /opt/family_chat/family_chat_server_bin
+            sudo systemctl restart family-chat
+            sleep 3
+            sudo systemctl status family-chat --no-pager -l

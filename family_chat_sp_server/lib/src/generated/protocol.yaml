@@ -1,0 +1,54 @@
+emailIdp:
+  - login:
+  - startRegistration:
+  - verifyRegistrationCode:
+  - finishRegistration:
+  - startPasswordReset:
+  - verifyPasswordResetCode:
+  - finishPasswordReset:
+  - hasAccount:
+jwtRefresh:
+  - refreshAccessToken:
+admin:
+  - createUser:
+  - blockUser:
+  - unblockUser:
+  - assignRoles:
+  - listAllChats:
+  - changeOwner:
+  - archiveChat:
+  - deleteArchivedChat:
+  - getStorageStats:
+  - setFileSizeLimit:
+  - getFilesOlderThan:
+  - deleteFilesOlderThan:
+auth:
+  - askAdmin:
+  - approveAskAdmin:
+  - loginWithToken:
+chat:
+  - createGroupChat:
+  - createOrGetDirectChat:
+  - listMyChats:
+  - getChatDetails:
+  - updateChatSettings:
+  - addMembers:
+  - removeMember:
+  - leaveChat:
+message:
+  - sendMessage:
+  - editMessage:
+  - deleteMessage:
+  - addReaction:
+  - removeReaction:
+  - markAsRead:
+  - getMessages:
+  - chatStream:
+  - sendTypingIndicator:
+user:
+  - getMyProfile:
+  - updateProfile:
+  - listAllUsers:
+  - getUsersInChat:
+greeting:
+  - hello:

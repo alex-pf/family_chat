@@ -1,0 +1,11 @@
+class: UserRoleAssignment
+table: user_role_assignments
+fields:
+  userId: int
+  role: UserRole
+  assignedAt: DateTime
+  assignedByUserId: int
+indexes:
+  user_role_unique:
+    fields: userId, role
+    unique: true

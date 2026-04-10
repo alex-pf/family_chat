@@ -1,0 +1,12 @@
+class: OneTimeToken
+table: one_time_tokens
+fields:
+  token: String
+  userId: int
+  expiresAt: DateTime
+  usedAt: DateTime?
+  requestedByUserId: int?
+indexes:
+  ott_token_idx:
+    fields: token
+    unique: true

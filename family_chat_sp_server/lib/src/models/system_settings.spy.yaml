@@ -1,0 +1,10 @@
+class: SystemSettings
+table: system_settings
+fields:
+  key: String
+  value: String
+  updatedAt: DateTime
+indexes:
+  settings_key_idx:
+    fields: key
+    unique: true

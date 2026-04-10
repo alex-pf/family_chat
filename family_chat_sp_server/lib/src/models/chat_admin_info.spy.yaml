@@ -1,0 +1,6 @@
+class: ChatAdminInfo
+fields:
+  id: int
+  name: String
+  ownerName: String?
+  memberCount: int

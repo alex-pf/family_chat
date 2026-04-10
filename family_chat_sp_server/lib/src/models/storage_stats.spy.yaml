@@ -1,0 +1,4 @@
+class: StorageStats
+fields:
+  totalBytes: int
+  fileCount: int

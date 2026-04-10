@@ -1,0 +1,21 @@
+class: ChatMessage
+table: chat_messages
+fields:
+  chatId: int
+  senderUserId: int
+  text: String?
+  imageUrl: String?
+  fileUrl: String?
+  fileName: String?
+  fileSize: int?
+  isDeleted: bool, default=false
+  isEdited: bool, default=false
+  createdAt: DateTime
+  editedAt: DateTime?
+indexes:
+  message_chat_idx:
+    fields: chatId
+  message_sender_idx:
+    fields: senderUserId
+  message_created_idx:
+    fields: chatId, createdAt

@@ -1,0 +1,10 @@
+enum: UserRole
+serialized: byName
+values:
+  - admin
+  - master
+  - family
+  - parents
+  - children
+  - guests
+  - friends
