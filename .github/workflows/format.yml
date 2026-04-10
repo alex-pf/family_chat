@@ -24,4 +24,4 @@ jobs:
 
       - name: Check formatting
         working-directory: family_chat_sp_server
-        run: dart format --set-exit-if-changed .
+        run: dart format --output=none --set-exit-if-changed .
