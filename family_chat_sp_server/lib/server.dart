@@ -51,19 +51,13 @@ void run(List<String> args) async {
   final appDir = Directory(Uri(path: 'web/app').toFilePath());
   if (appDir.existsSync()) {
     pod.webServer.addRoute(
-      FlutterRoute(
-        Directory(
-          Uri(path: 'web/app').toFilePath(),
-        ),
-      ),
+      FlutterRoute(Directory(Uri(path: 'web/app').toFilePath())),
       '/app',
     );
   } else {
     pod.webServer.addRoute(
       StaticRoute.file(
-        File(
-          Uri(path: 'web/pages/build_flutter_app.html').toFilePath(),
-        ),
+        File(Uri(path: 'web/pages/build_flutter_app.html').toFilePath()),
       ),
       '/app/**',
     );

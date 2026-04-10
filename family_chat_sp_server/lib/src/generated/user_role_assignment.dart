@@ -167,50 +167,27 @@ class UserRoleAssignmentUpdateTable
     extends _i1.UpdateTable<UserRoleAssignmentTable> {
   UserRoleAssignmentUpdateTable(super.table);
 
-  _i1.ColumnValue<int, int> userId(int value) => _i1.ColumnValue(
-    table.userId,
-    value,
-  );
+  _i1.ColumnValue<int, int> userId(int value) =>
+      _i1.ColumnValue(table.userId, value);
 
   _i1.ColumnValue<_i2.UserRole, _i2.UserRole> role(_i2.UserRole value) =>
-      _i1.ColumnValue(
-        table.role,
-        value,
-      );
+      _i1.ColumnValue(table.role, value);
 
   _i1.ColumnValue<DateTime, DateTime> assignedAt(DateTime value) =>
-      _i1.ColumnValue(
-        table.assignedAt,
-        value,
-      );
+      _i1.ColumnValue(table.assignedAt, value);
 
-  _i1.ColumnValue<int, int> assignedByUserId(int value) => _i1.ColumnValue(
-    table.assignedByUserId,
-    value,
-  );
+  _i1.ColumnValue<int, int> assignedByUserId(int value) =>
+      _i1.ColumnValue(table.assignedByUserId, value);
 }
 
 class UserRoleAssignmentTable extends _i1.Table<int?> {
   UserRoleAssignmentTable({super.tableRelation})
     : super(tableName: 'user_role_assignments') {
     updateTable = UserRoleAssignmentUpdateTable(this);
-    userId = _i1.ColumnInt(
-      'userId',
-      this,
-    );
-    role = _i1.ColumnEnum(
-      'role',
-      this,
-      _i1.EnumSerialization.byName,
-    );
-    assignedAt = _i1.ColumnDateTime(
-      'assignedAt',
-      this,
-    );
-    assignedByUserId = _i1.ColumnInt(
-      'assignedByUserId',
-      this,
-    );
+    userId = _i1.ColumnInt('userId', this);
+    role = _i1.ColumnEnum('role', this, _i1.EnumSerialization.byName);
+    assignedAt = _i1.ColumnDateTime('assignedAt', this);
+    assignedByUserId = _i1.ColumnInt('assignedByUserId', this);
   }
 
   late final UserRoleAssignmentUpdateTable updateTable;

@@ -24,7 +24,8 @@ Future<void> seedAdminIfNeeded(Session session) async {
   }
   if (adminPassword == null || adminPassword.isEmpty) {
     session.log(
-        '[AdminSeeder] ADMIN_INITIAL_PASSWORD not set – skipping seed.');
+      '[AdminSeeder] ADMIN_INITIAL_PASSWORD not set – skipping seed.',
+    );
     return;
   }
 
@@ -44,8 +45,7 @@ Future<void> seedAdminIfNeeded(Session session) async {
     where: (t) => t.email.equals(adminEmail),
   );
   if (existingUser != null) {
-    session.log(
-        '[AdminSeeder] Email already registered – skipping seed.');
+    session.log('[AdminSeeder] Email already registered – skipping seed.');
     return;
   }
 
@@ -97,7 +97,8 @@ Future<void> seedAdminIfNeeded(Session session) async {
     await UserRoleAssignment.db.insertRow(session, assignment);
 
     session.log(
-        '[AdminSeeder] Admin seeded successfully (appUserId=${savedUser.id}).');
+      '[AdminSeeder] Admin seeded successfully (appUserId=${savedUser.id}).',
+    );
   } catch (e, st) {
     session.log(
       '[AdminSeeder] Failed to seed admin: $e\n$st',
@@ -116,8 +117,14 @@ String _initials(String name) {
 
 String _colorFromSeed(String seed) {
   const colors = [
-    '#FF5733', '#33B5FF', '#8033FF', '#FF33A8',
-    '#33FF57', '#FF8C33', '#33FFF5', '#FF3355',
+    '#FF5733',
+    '#33B5FF',
+    '#8033FF',
+    '#FF33A8',
+    '#33FF57',
+    '#FF8C33',
+    '#33FFF5',
+    '#FF3355',
   ];
   final idx = seed.codeUnits.fold(0, (a, b) => a + b) % colors.length;
   return colors[idx];

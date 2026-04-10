@@ -24,8 +24,10 @@ class ChatEndpoint extends Endpoint {
   ) async {
     final caller = await getAuthenticatedAppUser(session);
 
-    final allowed =
-        await hasAnyRole(session, [UserRole.admin, UserRole.master]);
+    final allowed = await hasAnyRole(session, [
+      UserRole.admin,
+      UserRole.master,
+    ]);
     if (!allowed) {
       throw NotAuthorizedException(
         reason: AuthenticationFailureReason.insufficientAccess,
@@ -50,11 +52,7 @@ class ChatEndpoint extends Endpoint {
     for (final uid in allMemberIds) {
       await ChatMember.db.insertRow(
         session,
-        ChatMember(
-          chatId: savedChat.id!,
-          userId: uid,
-          joinedAt: now,
-        ),
+        ChatMember(chatId: savedChat.id!, userId: uid, joinedAt: now),
       );
     }
 
@@ -63,10 +61,7 @@ class ChatEndpoint extends Endpoint {
 
   /// Returns the existing direct chat between the caller and [otherUserId],
   /// or creates one if it doesn't exist.
-  Future<Chat> createOrGetDirectChat(
-    Session session,
-    int otherUserId,
-  ) async {
+  Future<Chat> createOrGetDirectChat(Session session, int otherUserId) async {
     final caller = await getAuthenticatedAppUser(session);
 
     // Find existing direct chat between these two users.
@@ -81,8 +76,7 @@ class ChatEndpoint extends Endpoint {
       final otherMembership = await ChatMember.db.findFirstRow(
         session,
         where: (t) =>
-            t.chatId.equals(membership.chatId) &
-            t.userId.equals(otherUserId),
+            t.chatId.equals(membership.chatId) & t.userId.equals(otherUserId),
       );
       if (otherMembership != null) return chat;
     }
@@ -143,8 +137,7 @@ class ChatEndpoint extends Endpoint {
       final latestMessages = await ChatMessage.db.find(
         session,
         where: (t) =>
-            t.chatId.equals(membership.chatId) &
-            t.isDeleted.equals(false),
+            t.chatId.equals(membership.chatId) & t.isDeleted.equals(false),
         orderBy: (t) => t.createdAt,
         orderDescending: true,
         limit: 1,
@@ -178,8 +171,7 @@ class ChatEndpoint extends Endpoint {
         unreadCount = await ChatMessage.db.count(
           session,
           where: (t) =>
-              t.chatId.equals(membership.chatId) &
-              t.isDeleted.equals(false),
+              t.chatId.equals(membership.chatId) & t.isDeleted.equals(false),
         );
       }
 
@@ -189,25 +181,28 @@ class ChatEndpoint extends Endpoint {
         final otherMembership = await ChatMember.db.findFirstRow(
           session,
           where: (t) =>
-              t.chatId.equals(chat.id!) &
-              t.userId.notEquals(caller.id!),
+              t.chatId.equals(chat.id!) & t.userId.notEquals(caller.id!),
         );
         if (otherMembership != null) {
-          final other =
-              await AppUser.db.findById(session, otherMembership.userId);
+          final other = await AppUser.db.findById(
+            session,
+            otherMembership.userId,
+          );
           avatarColor = other?.avatarColor ?? avatarColor;
         }
       }
 
-      result.add(ChatListItem(
-        chatId: chat.id!,
-        name: chat.name,
-        lastMessage: lastMessageText,
-        lastMessageTime: lastMessageTime,
-        unreadCount: unreadCount,
-        isGroup: chat.isGroup,
-        avatarColor: avatarColor,
-      ));
+      result.add(
+        ChatListItem(
+          chatId: chat.id!,
+          name: chat.name,
+          lastMessage: lastMessageText,
+          lastMessageTime: lastMessageTime,
+          unreadCount: unreadCount,
+          isGroup: chat.isGroup,
+          avatarColor: avatarColor,
+        ),
+      );
     }
 
     // Sort by last message time descending.
@@ -313,11 +308,7 @@ class ChatEndpoint extends Endpoint {
   /// Removes a user from a group chat.
   ///
   /// Caller must be the owner or an admin.
-  Future<void> removeMember(
-    Session session,
-    int chatId,
-    int userId,
-  ) async {
+  Future<void> removeMember(Session session, int chatId, int userId) async {
     final caller = await getAuthenticatedAppUser(session);
 
     final chat = await Chat.db.findById(session, chatId);
@@ -348,8 +339,7 @@ class ChatEndpoint extends Endpoint {
 
     final membership = await ChatMember.db.findFirstRow(
       session,
-      where: (t) =>
-          t.chatId.equals(chatId) & t.userId.equals(caller.id!),
+      where: (t) => t.chatId.equals(chatId) & t.userId.equals(caller.id!),
     );
     if (membership == null) {
       throw Exception('You are not a member of chat $chatId');

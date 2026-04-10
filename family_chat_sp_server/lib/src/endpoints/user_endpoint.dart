@@ -26,8 +26,8 @@ class UserEndpoint extends Endpoint {
     final initials = parts.length >= 2
         ? '${parts[0][0]}${parts[1][0]}'.toUpperCase()
         : name.isNotEmpty
-            ? name[0].toUpperCase()
-            : appUser.avatarInitials;
+        ? name[0].toUpperCase()
+        : appUser.avatarInitials;
 
     appUser.name = name.trim();
     appUser.avatarInitials = initials;
@@ -64,8 +64,7 @@ class UserEndpoint extends Endpoint {
     // The caller must be a member of the chat themselves.
     final membership = await ChatMember.db.findFirstRow(
       session,
-      where: (t) =>
-          t.chatId.equals(chatId) & t.userId.equals(caller.id!),
+      where: (t) => t.chatId.equals(chatId) & t.userId.equals(caller.id!),
     );
     if (membership == null) {
       throw NotAuthorizedException(
@@ -83,9 +82,6 @@ class UserEndpoint extends Endpoint {
     if (userIds.isEmpty) return [];
 
     // Fetch AppUser records in bulk.
-    return AppUser.db.find(
-      session,
-      where: (t) => t.id.inSet(userIds),
-    );
+    return AppUser.db.find(session, where: (t) => t.id.inSet(userIds));
   }
 }

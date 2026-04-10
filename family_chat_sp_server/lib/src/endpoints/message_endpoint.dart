@@ -33,16 +33,15 @@ class MessageEndpoint extends Endpoint {
 
     if (text == null && imageUrl == null && fileUrl == null) {
       throw ArgumentError(
-          'Message must have at least text, imageUrl or fileUrl');
+        'Message must have at least text, imageUrl or fileUrl',
+      );
     }
 
     final now = DateTime.now().toUtc();
     final message = ChatMessage(
       chatId: chatId,
       senderUserId: caller.id!,
-      text: text != null && text.length > 1024
-          ? text.substring(0, 1024)
-          : text,
+      text: text != null && text.length > 1024 ? text.substring(0, 1024) : text,
       imageUrl: imageUrl,
       fileUrl: fileUrl,
       fileName: fileName,
@@ -91,8 +90,7 @@ class MessageEndpoint extends Endpoint {
       );
     }
 
-    message.text =
-        newText.length > 1024 ? newText.substring(0, 1024) : newText;
+    message.text = newText.length > 1024 ? newText.substring(0, 1024) : newText;
     message.isEdited = true;
     message.editedAt = DateTime.now().toUtc();
 
@@ -229,8 +227,7 @@ class MessageEndpoint extends Endpoint {
 
     final membership = await ChatMember.db.findFirstRow(
       session,
-      where: (t) =>
-          t.chatId.equals(chatId) & t.userId.equals(caller.id!),
+      where: (t) => t.chatId.equals(chatId) & t.userId.equals(caller.id!),
     );
     if (membership == null) {
       throw NotAuthorizedException(
@@ -254,8 +251,7 @@ class MessageEndpoint extends Endpoint {
     for (final msg in unread) {
       final existing = await MessageStatus.db.findFirstRow(
         session,
-        where: (t) =>
-            t.messageId.equals(msg.id!) & t.userId.equals(caller.id!),
+        where: (t) => t.messageId.equals(msg.id!) & t.userId.equals(caller.id!),
       );
       if (existing != null) {
         existing.status = 'read';
@@ -368,10 +364,7 @@ class MessageEndpoint extends Endpoint {
     }
   }
 
-  Future<void> _requireChatNotArchived(
-    Session session,
-    int chatId,
-  ) async {
+  Future<void> _requireChatNotArchived(Session session, int chatId) async {
     final chat = await Chat.db.findById(session, chatId);
     if (chat == null) throw Exception('Chat not found: $chatId');
     if (chat.isArchived) {

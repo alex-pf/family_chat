@@ -71,7 +71,8 @@ Future<AppUser> getAuthenticatedAppUser(Session session) async {
   );
   if (appUser == null) {
     throw Exception(
-        'AppUser record not found for userIdentifier=${authInfo.userIdentifier}');
+      'AppUser record not found for userIdentifier=${authInfo.userIdentifier}',
+    );
   }
   return appUser;
 }

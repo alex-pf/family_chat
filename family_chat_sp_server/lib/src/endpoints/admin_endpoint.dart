@@ -39,8 +39,8 @@ class AdminEndpoint extends Endpoint {
     final initials = parts.length >= 2
         ? '${parts[0][0]}${parts[1][0]}'.toUpperCase()
         : name.isNotEmpty
-            ? name[0].toUpperCase()
-            : 'U';
+        ? name[0].toUpperCase()
+        : 'U';
     final color = _colorFromSeed(email);
 
     final adminUser = await getAuthenticatedAppUser(session);
@@ -155,12 +155,14 @@ class AdminEndpoint extends Endpoint {
         ownerName = owner?.name;
       }
 
-      result.add(ChatAdminInfo(
-        id: chat.id!,
-        name: chat.name,
-        ownerName: ownerName,
-        memberCount: memberCount,
-      ));
+      result.add(
+        ChatAdminInfo(
+          id: chat.id!,
+          name: chat.name,
+          ownerName: ownerName,
+          memberCount: memberCount,
+        ),
+      );
     }
 
     return result;
@@ -306,8 +308,7 @@ class AdminEndpoint extends Endpoint {
 
     final messages = await ChatMessage.db.find(
       session,
-      where: (t) =>
-          t.fileUrl.notEquals(null) & (t.createdAt < cutoff),
+      where: (t) => t.fileUrl.notEquals(null) & (t.createdAt < cutoff),
       orderBy: (t) => t.createdAt,
     );
 
@@ -339,8 +340,7 @@ class AdminEndpoint extends Endpoint {
 
     final messages = await ChatMessage.db.find(
       session,
-      where: (t) =>
-          t.fileUrl.notEquals(null) & (t.createdAt < cutoff),
+      where: (t) => t.fileUrl.notEquals(null) & (t.createdAt < cutoff),
     );
 
     for (final msg in messages) {
@@ -360,8 +360,14 @@ class AdminEndpoint extends Endpoint {
 
   String _colorFromSeed(String seed) {
     const colors = [
-      '#FF5733', '#33B5FF', '#8033FF', '#FF33A8',
-      '#33FF57', '#FF8C33', '#33FFF5', '#FF3355',
+      '#FF5733',
+      '#33B5FF',
+      '#8033FF',
+      '#FF33A8',
+      '#33FF57',
+      '#FF8C33',
+      '#33FFF5',
+      '#FF3355',
     ];
     final idx = seed.codeUnits.fold(0, (a, b) => a + b) % colors.length;
     return colors[idx];

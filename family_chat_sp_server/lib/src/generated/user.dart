@@ -237,96 +237,49 @@ class AppUserUpdateTable extends _i1.UpdateTable<AppUserTable> {
   AppUserUpdateTable(super.table);
 
   _i1.ColumnValue<String, String> serverpodUserId(String? value) =>
-      _i1.ColumnValue(
-        table.serverpodUserId,
-        value,
-      );
+      _i1.ColumnValue(table.serverpodUserId, value);
 
-  _i1.ColumnValue<String, String> email(String value) => _i1.ColumnValue(
-    table.email,
-    value,
-  );
+  _i1.ColumnValue<String, String> email(String value) =>
+      _i1.ColumnValue(table.email, value);
 
-  _i1.ColumnValue<String, String> name(String value) => _i1.ColumnValue(
-    table.name,
-    value,
-  );
+  _i1.ColumnValue<String, String> name(String value) =>
+      _i1.ColumnValue(table.name, value);
 
-  _i1.ColumnValue<String, String> avatarColor(String value) => _i1.ColumnValue(
-    table.avatarColor,
-    value,
-  );
+  _i1.ColumnValue<String, String> avatarColor(String value) =>
+      _i1.ColumnValue(table.avatarColor, value);
 
   _i1.ColumnValue<String, String> avatarInitials(String value) =>
-      _i1.ColumnValue(
-        table.avatarInitials,
-        value,
-      );
+      _i1.ColumnValue(table.avatarInitials, value);
 
-  _i1.ColumnValue<bool, bool> isBlocked(bool value) => _i1.ColumnValue(
-    table.isBlocked,
-    value,
-  );
+  _i1.ColumnValue<bool, bool> isBlocked(bool value) =>
+      _i1.ColumnValue(table.isBlocked, value);
 
-  _i1.ColumnValue<bool, bool> mustChangePassword(bool value) => _i1.ColumnValue(
-    table.mustChangePassword,
-    value,
-  );
+  _i1.ColumnValue<bool, bool> mustChangePassword(bool value) =>
+      _i1.ColumnValue(table.mustChangePassword, value);
 
   _i1.ColumnValue<DateTime, DateTime> createdAt(DateTime value) =>
-      _i1.ColumnValue(
-        table.createdAt,
-        value,
-      );
+      _i1.ColumnValue(table.createdAt, value);
 
   _i1.ColumnValue<DateTime, DateTime> lastSeenAt(DateTime? value) =>
-      _i1.ColumnValue(
-        table.lastSeenAt,
-        value,
-      );
+      _i1.ColumnValue(table.lastSeenAt, value);
 }
 
 class AppUserTable extends _i1.Table<int?> {
   AppUserTable({super.tableRelation}) : super(tableName: 'app_users') {
     updateTable = AppUserUpdateTable(this);
-    serverpodUserId = _i1.ColumnString(
-      'serverpodUserId',
-      this,
-    );
-    email = _i1.ColumnString(
-      'email',
-      this,
-    );
-    name = _i1.ColumnString(
-      'name',
-      this,
-    );
-    avatarColor = _i1.ColumnString(
-      'avatarColor',
-      this,
-    );
-    avatarInitials = _i1.ColumnString(
-      'avatarInitials',
-      this,
-    );
-    isBlocked = _i1.ColumnBool(
-      'isBlocked',
-      this,
-      hasDefault: true,
-    );
+    serverpodUserId = _i1.ColumnString('serverpodUserId', this);
+    email = _i1.ColumnString('email', this);
+    name = _i1.ColumnString('name', this);
+    avatarColor = _i1.ColumnString('avatarColor', this);
+    avatarInitials = _i1.ColumnString('avatarInitials', this);
+    isBlocked = _i1.ColumnBool('isBlocked', this, hasDefault: true);
     mustChangePassword = _i1.ColumnBool(
       'mustChangePassword',
       this,
       hasDefault: true,
     );
-    createdAt = _i1.ColumnDateTime(
-      'createdAt',
-      this,
-    );
-    lastSeenAt = _i1.ColumnDateTime(
-      'lastSeenAt',
-      this,
-    );
+    createdAt = _i1.ColumnDateTime('createdAt', this);
+    lastSeenAt = _i1.ColumnDateTime('lastSeenAt', this);
   }
 
   late final AppUserUpdateTable updateTable;
@@ -531,10 +484,7 @@ class AppUserRepository {
     AppUser row, {
     _i1.Transaction? transaction,
   }) async {
-    return session.db.insertRow<AppUser>(
-      row,
-      transaction: transaction,
-    );
+    return session.db.insertRow<AppUser>(row, transaction: transaction);
   }
 
   /// Updates all [AppUser]s in the list and returns the updated rows. If
@@ -619,10 +569,7 @@ class AppUserRepository {
     List<AppUser> rows, {
     _i1.Transaction? transaction,
   }) async {
-    return session.db.delete<AppUser>(
-      rows,
-      transaction: transaction,
-    );
+    return session.db.delete<AppUser>(rows, transaction: transaction);
   }
 
   /// Deletes a single [AppUser].
@@ -631,10 +578,7 @@ class AppUserRepository {
     AppUser row, {
     _i1.Transaction? transaction,
   }) async {
-    return session.db.deleteRow<AppUser>(
-      row,
-      transaction: transaction,
-    );
+    return session.db.deleteRow<AppUser>(row, transaction: transaction);
   }
 
   /// Deletes all rows matching the [where] expression.

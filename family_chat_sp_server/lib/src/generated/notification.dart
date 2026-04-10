@@ -205,76 +205,39 @@ class _AppNotificationImpl extends AppNotification {
 class AppNotificationUpdateTable extends _i1.UpdateTable<AppNotificationTable> {
   AppNotificationUpdateTable(super.table);
 
-  _i1.ColumnValue<int, int> recipientUserId(int value) => _i1.ColumnValue(
-    table.recipientUserId,
-    value,
-  );
+  _i1.ColumnValue<int, int> recipientUserId(int value) =>
+      _i1.ColumnValue(table.recipientUserId, value);
 
-  _i1.ColumnValue<String, String> type(String value) => _i1.ColumnValue(
-    table.type,
-    value,
-  );
+  _i1.ColumnValue<String, String> type(String value) =>
+      _i1.ColumnValue(table.type, value);
 
-  _i1.ColumnValue<String, String> title(String value) => _i1.ColumnValue(
-    table.title,
-    value,
-  );
+  _i1.ColumnValue<String, String> title(String value) =>
+      _i1.ColumnValue(table.title, value);
 
-  _i1.ColumnValue<String, String> body(String value) => _i1.ColumnValue(
-    table.body,
-    value,
-  );
+  _i1.ColumnValue<String, String> body(String value) =>
+      _i1.ColumnValue(table.body, value);
 
-  _i1.ColumnValue<int, int> relatedEntityId(int? value) => _i1.ColumnValue(
-    table.relatedEntityId,
-    value,
-  );
+  _i1.ColumnValue<int, int> relatedEntityId(int? value) =>
+      _i1.ColumnValue(table.relatedEntityId, value);
 
-  _i1.ColumnValue<bool, bool> isRead(bool value) => _i1.ColumnValue(
-    table.isRead,
-    value,
-  );
+  _i1.ColumnValue<bool, bool> isRead(bool value) =>
+      _i1.ColumnValue(table.isRead, value);
 
   _i1.ColumnValue<DateTime, DateTime> createdAt(DateTime value) =>
-      _i1.ColumnValue(
-        table.createdAt,
-        value,
-      );
+      _i1.ColumnValue(table.createdAt, value);
 }
 
 class AppNotificationTable extends _i1.Table<int?> {
   AppNotificationTable({super.tableRelation})
     : super(tableName: 'app_notifications') {
     updateTable = AppNotificationUpdateTable(this);
-    recipientUserId = _i1.ColumnInt(
-      'recipientUserId',
-      this,
-    );
-    type = _i1.ColumnString(
-      'type',
-      this,
-    );
-    title = _i1.ColumnString(
-      'title',
-      this,
-    );
-    body = _i1.ColumnString(
-      'body',
-      this,
-    );
-    relatedEntityId = _i1.ColumnInt(
-      'relatedEntityId',
-      this,
-    );
-    isRead = _i1.ColumnBool(
-      'isRead',
-      this,
-      hasDefault: true,
-    );
-    createdAt = _i1.ColumnDateTime(
-      'createdAt',
-      this,
-    );
+    recipientUserId = _i1.ColumnInt('recipientUserId', this);
+    type = _i1.ColumnString('type', this);
+    title = _i1.ColumnString('title', this);
+    body = _i1.ColumnString('body', this);
+    relatedEntityId = _i1.ColumnInt('relatedEntityId', this);
+    isRead = _i1.ColumnBool('isRead', this, hasDefault: true);
+    createdAt = _i1.ColumnDateTime('createdAt', this);
   }
 
   late final AppNotificationUpdateTable updateTable;
@@ -473,10 +436,7 @@ class AppNotificationRepository {
     AppNotification row, {
     _i1.Transaction? transaction,
   }) async {
-    return session.db.insertRow<AppNotification>(
-      row,
-      transaction: transaction,
-    );
+    return session.db.insertRow<AppNotification>(row, transaction: transaction);
   }
 
   /// Updates all [AppNotification]s in the list and returns the updated rows. If
@@ -563,10 +523,7 @@ class AppNotificationRepository {
     List<AppNotification> rows, {
     _i1.Transaction? transaction,
   }) async {
-    return session.db.delete<AppNotification>(
-      rows,
-      transaction: transaction,
-    );
+    return session.db.delete<AppNotification>(rows, transaction: transaction);
   }
 
   /// Deletes a single [AppNotification].
@@ -575,10 +532,7 @@ class AppNotificationRepository {
     AppNotification row, {
     _i1.Transaction? transaction,
   }) async {
-    return session.db.deleteRow<AppNotification>(
-      row,
-      transaction: transaction,
-    );
+    return session.db.deleteRow<AppNotification>(row, transaction: transaction);
   }
 
   /// Deletes all rows matching the [where] expression.

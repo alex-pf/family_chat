@@ -56,8 +56,7 @@ class AuthEndpoint extends Endpoint {
       await AppNotification.db.insertRow(session, notification);
     }
 
-    session.log(
-        '[AuthEndpoint.askAdmin] Notifications sent for email=$email');
+    session.log('[AuthEndpoint.askAdmin] Notifications sent for email=$email');
     return true;
   }
 
@@ -70,22 +69,19 @@ class AuthEndpoint extends Endpoint {
   /// to the requesting user.
   ///
   /// Requires caller to be authenticated as admin.
-  Future<String> approveAskAdmin(
-      Session session, int requestingUserId) async {
+  Future<String> approveAskAdmin(Session session, int requestingUserId) async {
     // Enforce admin role (also implicitly checks authentication).
     await requireAdmin(session);
 
     // Verify requesting user exists.
-    final requestingUser =
-        await AppUser.db.findById(session, requestingUserId);
+    final requestingUser = await AppUser.db.findById(session, requestingUserId);
     if (requestingUser == null) {
       throw Exception('User not found: id=$requestingUserId');
     }
 
     // Generate a secure random token.
     final token = _generateToken();
-    final expiresAt =
-        DateTime.now().toUtc().add(const Duration(minutes: 15));
+    final expiresAt = DateTime.now().toUtc().add(const Duration(minutes: 15));
 
     // Persist the token.
     final ott = OneTimeToken(
@@ -101,7 +97,8 @@ class AuthEndpoint extends Endpoint {
       recipientUserId: requestingUserId,
       type: 'access_approved',
       title: 'Access approved',
-      body: 'An admin has approved your access. '
+      body:
+          'An admin has approved your access. '
           'Use your one-time token to sign in.',
       relatedEntityId: adminUser.id,
       isRead: false,
@@ -110,7 +107,8 @@ class AuthEndpoint extends Endpoint {
     await AppNotification.db.insertRow(session, notification);
 
     session.log(
-        '[AuthEndpoint.approveAskAdmin] Token issued for userId=$requestingUserId');
+      '[AuthEndpoint.approveAskAdmin] Token issued for userId=$requestingUserId',
+    );
     return token;
   }
 
@@ -155,7 +153,8 @@ class AuthEndpoint extends Endpoint {
     }
 
     session.log(
-        '[AuthEndpoint.loginWithToken] Login via token for userId=${appUser.id}');
+      '[AuthEndpoint.loginWithToken] Login via token for userId=${appUser.id}',
+    );
     return appUser.serverpodUserId!;
   }
 
@@ -167,7 +166,9 @@ class AuthEndpoint extends Endpoint {
     const chars =
         'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     final rng = Random.secure();
-    return List.generate(length, (_) => chars[rng.nextInt(chars.length)])
-        .join();
+    return List.generate(
+      length,
+      (_) => chars[rng.nextInt(chars.length)],
+    ).join();
   }
 }

@@ -256,113 +256,54 @@ class _ChatMessageImpl extends ChatMessage {
 class ChatMessageUpdateTable extends _i1.UpdateTable<ChatMessageTable> {
   ChatMessageUpdateTable(super.table);
 
-  _i1.ColumnValue<int, int> chatId(int value) => _i1.ColumnValue(
-    table.chatId,
-    value,
-  );
+  _i1.ColumnValue<int, int> chatId(int value) =>
+      _i1.ColumnValue(table.chatId, value);
 
-  _i1.ColumnValue<int, int> senderUserId(int value) => _i1.ColumnValue(
-    table.senderUserId,
-    value,
-  );
+  _i1.ColumnValue<int, int> senderUserId(int value) =>
+      _i1.ColumnValue(table.senderUserId, value);
 
-  _i1.ColumnValue<String, String> text(String? value) => _i1.ColumnValue(
-    table.text,
-    value,
-  );
+  _i1.ColumnValue<String, String> text(String? value) =>
+      _i1.ColumnValue(table.text, value);
 
-  _i1.ColumnValue<String, String> imageUrl(String? value) => _i1.ColumnValue(
-    table.imageUrl,
-    value,
-  );
+  _i1.ColumnValue<String, String> imageUrl(String? value) =>
+      _i1.ColumnValue(table.imageUrl, value);
 
-  _i1.ColumnValue<String, String> fileUrl(String? value) => _i1.ColumnValue(
-    table.fileUrl,
-    value,
-  );
+  _i1.ColumnValue<String, String> fileUrl(String? value) =>
+      _i1.ColumnValue(table.fileUrl, value);
 
-  _i1.ColumnValue<String, String> fileName(String? value) => _i1.ColumnValue(
-    table.fileName,
-    value,
-  );
+  _i1.ColumnValue<String, String> fileName(String? value) =>
+      _i1.ColumnValue(table.fileName, value);
 
-  _i1.ColumnValue<int, int> fileSize(int? value) => _i1.ColumnValue(
-    table.fileSize,
-    value,
-  );
+  _i1.ColumnValue<int, int> fileSize(int? value) =>
+      _i1.ColumnValue(table.fileSize, value);
 
-  _i1.ColumnValue<bool, bool> isDeleted(bool value) => _i1.ColumnValue(
-    table.isDeleted,
-    value,
-  );
+  _i1.ColumnValue<bool, bool> isDeleted(bool value) =>
+      _i1.ColumnValue(table.isDeleted, value);
 
-  _i1.ColumnValue<bool, bool> isEdited(bool value) => _i1.ColumnValue(
-    table.isEdited,
-    value,
-  );
+  _i1.ColumnValue<bool, bool> isEdited(bool value) =>
+      _i1.ColumnValue(table.isEdited, value);
 
   _i1.ColumnValue<DateTime, DateTime> createdAt(DateTime value) =>
-      _i1.ColumnValue(
-        table.createdAt,
-        value,
-      );
+      _i1.ColumnValue(table.createdAt, value);
 
   _i1.ColumnValue<DateTime, DateTime> editedAt(DateTime? value) =>
-      _i1.ColumnValue(
-        table.editedAt,
-        value,
-      );
+      _i1.ColumnValue(table.editedAt, value);
 }
 
 class ChatMessageTable extends _i1.Table<int?> {
   ChatMessageTable({super.tableRelation}) : super(tableName: 'chat_messages') {
     updateTable = ChatMessageUpdateTable(this);
-    chatId = _i1.ColumnInt(
-      'chatId',
-      this,
-    );
-    senderUserId = _i1.ColumnInt(
-      'senderUserId',
-      this,
-    );
-    text = _i1.ColumnString(
-      'text',
-      this,
-    );
-    imageUrl = _i1.ColumnString(
-      'imageUrl',
-      this,
-    );
-    fileUrl = _i1.ColumnString(
-      'fileUrl',
-      this,
-    );
-    fileName = _i1.ColumnString(
-      'fileName',
-      this,
-    );
-    fileSize = _i1.ColumnInt(
-      'fileSize',
-      this,
-    );
-    isDeleted = _i1.ColumnBool(
-      'isDeleted',
-      this,
-      hasDefault: true,
-    );
-    isEdited = _i1.ColumnBool(
-      'isEdited',
-      this,
-      hasDefault: true,
-    );
-    createdAt = _i1.ColumnDateTime(
-      'createdAt',
-      this,
-    );
-    editedAt = _i1.ColumnDateTime(
-      'editedAt',
-      this,
-    );
+    chatId = _i1.ColumnInt('chatId', this);
+    senderUserId = _i1.ColumnInt('senderUserId', this);
+    text = _i1.ColumnString('text', this);
+    imageUrl = _i1.ColumnString('imageUrl', this);
+    fileUrl = _i1.ColumnString('fileUrl', this);
+    fileName = _i1.ColumnString('fileName', this);
+    fileSize = _i1.ColumnInt('fileSize', this);
+    isDeleted = _i1.ColumnBool('isDeleted', this, hasDefault: true);
+    isEdited = _i1.ColumnBool('isEdited', this, hasDefault: true);
+    createdAt = _i1.ColumnDateTime('createdAt', this);
+    editedAt = _i1.ColumnDateTime('editedAt', this);
   }
 
   late final ChatMessageUpdateTable updateTable;
@@ -573,10 +514,7 @@ class ChatMessageRepository {
     ChatMessage row, {
     _i1.Transaction? transaction,
   }) async {
-    return session.db.insertRow<ChatMessage>(
-      row,
-      transaction: transaction,
-    );
+    return session.db.insertRow<ChatMessage>(row, transaction: transaction);
   }
 
   /// Updates all [ChatMessage]s in the list and returns the updated rows. If
@@ -661,10 +599,7 @@ class ChatMessageRepository {
     List<ChatMessage> rows, {
     _i1.Transaction? transaction,
   }) async {
-    return session.db.delete<ChatMessage>(
-      rows,
-      transaction: transaction,
-    );
+    return session.db.delete<ChatMessage>(rows, transaction: transaction);
   }
 
   /// Deletes a single [ChatMessage].
@@ -673,10 +608,7 @@ class ChatMessageRepository {
     ChatMessage row, {
     _i1.Transaction? transaction,
   }) async {
-    return session.db.deleteRow<ChatMessage>(
-      row,
-      transaction: transaction,
-    );
+    return session.db.deleteRow<ChatMessage>(row, transaction: transaction);
   }
 
   /// Deletes all rows matching the [where] expression.

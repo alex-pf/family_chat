@@ -170,46 +170,19 @@ class _InternalTestEndpoints extends TestEndpoints
     _i2.SerializationManager serializationManager,
     _i2.EndpointDispatch endpoints,
   ) {
-    emailIdp = _EmailIdpEndpoint(
-      endpoints,
-      serializationManager,
-    );
-    jwtRefresh = _JwtRefreshEndpoint(
-      endpoints,
-      serializationManager,
-    );
-    admin = _AdminEndpoint(
-      endpoints,
-      serializationManager,
-    );
-    auth = _AuthEndpoint(
-      endpoints,
-      serializationManager,
-    );
-    chat = _ChatEndpoint(
-      endpoints,
-      serializationManager,
-    );
-    message = _MessageEndpoint(
-      endpoints,
-      serializationManager,
-    );
-    user = _UserEndpoint(
-      endpoints,
-      serializationManager,
-    );
-    greeting = _GreetingEndpoint(
-      endpoints,
-      serializationManager,
-    );
+    emailIdp = _EmailIdpEndpoint(endpoints, serializationManager);
+    jwtRefresh = _JwtRefreshEndpoint(endpoints, serializationManager);
+    admin = _AdminEndpoint(endpoints, serializationManager);
+    auth = _AuthEndpoint(endpoints, serializationManager);
+    chat = _ChatEndpoint(endpoints, serializationManager);
+    message = _MessageEndpoint(endpoints, serializationManager);
+    user = _UserEndpoint(endpoints, serializationManager);
+    greeting = _GreetingEndpoint(endpoints, serializationManager);
   }
 }
 
 class _EmailIdpEndpoint {
-  _EmailIdpEndpoint(
-    this._endpointDispatch,
-    this._serializationManager,
-  );
+  _EmailIdpEndpoint(this._endpointDispatch, this._serializationManager);
 
   final _i2.EndpointDispatch _endpointDispatch;
 
@@ -482,10 +455,7 @@ class _EmailIdpEndpoint {
 }
 
 class _JwtRefreshEndpoint {
-  _JwtRefreshEndpoint(
-    this._endpointDispatch,
-    this._serializationManager,
-  );
+  _JwtRefreshEndpoint(this._endpointDispatch, this._serializationManager);
 
   final _i2.EndpointDispatch _endpointDispatch;
 
@@ -524,10 +494,7 @@ class _JwtRefreshEndpoint {
 }
 
 class _AdminEndpoint {
-  _AdminEndpoint(
-    this._endpointDispatch,
-    this._serializationManager,
-  );
+  _AdminEndpoint(this._endpointDispatch, this._serializationManager);
 
   final _i2.EndpointDispatch _endpointDispatch;
 
@@ -650,10 +617,7 @@ class _AdminEndpoint {
           createSessionCallback: (_) => _localUniqueSession,
           endpointPath: 'admin',
           methodName: 'assignRoles',
-          parameters: _i1.testObjectToJson({
-            'userId': userId,
-            'roles': roles,
-          }),
+          parameters: _i1.testObjectToJson({'userId': userId, 'roles': roles}),
           serializationManager: _serializationManager,
         );
         var _localReturnValue =
@@ -921,10 +885,7 @@ class _AdminEndpoint {
 }
 
 class _AuthEndpoint {
-  _AuthEndpoint(
-    this._endpointDispatch,
-    this._serializationManager,
-  );
+  _AuthEndpoint(this._endpointDispatch, this._serializationManager);
 
   final _i2.EndpointDispatch _endpointDispatch;
 
@@ -1027,10 +988,7 @@ class _AuthEndpoint {
 }
 
 class _ChatEndpoint {
-  _ChatEndpoint(
-    this._endpointDispatch,
-    this._serializationManager,
-  );
+  _ChatEndpoint(this._endpointDispatch, this._serializationManager);
 
   final _i2.EndpointDispatch _endpointDispatch;
 
@@ -1307,10 +1265,7 @@ class _ChatEndpoint {
 }
 
 class _MessageEndpoint {
-  _MessageEndpoint(
-    this._endpointDispatch,
-    this._serializationManager,
-  );
+  _MessageEndpoint(this._endpointDispatch, this._serializationManager);
 
   final _i2.EndpointDispatch _endpointDispatch;
 
@@ -1572,30 +1527,27 @@ class _MessageEndpoint {
     int chatId,
   ) {
     var _localTestStreamManager = _i1.TestStreamManager<_i14.ChatStreamEvent>();
-    _i1.callStreamFunctionAndHandleExceptions(
-      () async {
-        var _localUniqueSession =
-            (sessionBuilder as _i1.InternalTestSessionBuilder).internalBuild(
-              endpoint: 'message',
-              method: 'chatStream',
-            );
-        var _localCallContext = await _endpointDispatch
-            .getMethodStreamCallContext(
-              createSessionCallback: (_) => _localUniqueSession,
-              endpointPath: 'message',
-              methodName: 'chatStream',
-              arguments: {'chatId': chatId},
-              requestedInputStreams: [],
-              serializationManager: _serializationManager,
-            );
-        await _localTestStreamManager.callStreamMethod(
-          _localCallContext,
-          _localUniqueSession,
-          {},
-        );
-      },
-      _localTestStreamManager.outputStreamController,
-    );
+    _i1.callStreamFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _i1.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'message',
+            method: 'chatStream',
+          );
+      var _localCallContext = await _endpointDispatch
+          .getMethodStreamCallContext(
+            createSessionCallback: (_) => _localUniqueSession,
+            endpointPath: 'message',
+            methodName: 'chatStream',
+            arguments: {'chatId': chatId},
+            requestedInputStreams: [],
+            serializationManager: _serializationManager,
+          );
+      await _localTestStreamManager.callStreamMethod(
+        _localCallContext,
+        _localUniqueSession,
+        {},
+      );
+    }, _localTestStreamManager.outputStreamController);
     return _localTestStreamManager.outputStreamController.stream;
   }
 
@@ -1632,10 +1584,7 @@ class _MessageEndpoint {
 }
 
 class _UserEndpoint {
-  _UserEndpoint(
-    this._endpointDispatch,
-    this._serializationManager,
-  );
+  _UserEndpoint(this._endpointDispatch, this._serializationManager);
 
   final _i2.EndpointDispatch _endpointDispatch;
 
@@ -1765,10 +1714,7 @@ class _UserEndpoint {
 }
 
 class _GreetingEndpoint {
-  _GreetingEndpoint(
-    this._endpointDispatch,
-    this._serializationManager,
-  );
+  _GreetingEndpoint(this._endpointDispatch, this._serializationManager);
 
   final _i2.EndpointDispatch _endpointDispatch;
 
