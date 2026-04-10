@@ -23,7 +23,7 @@ jobs:
 
       - name: Start containers
         working-directory: family_chat_sp_server
-        run: docker compose up --quiet-pull --quiet-build --build -d
+        run: docker compose up --build -d
 
       - name: Install dependencies
         working-directory: family_chat_sp_server
