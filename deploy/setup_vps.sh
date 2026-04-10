@@ -41,10 +41,10 @@ echo ""
 
 # 4. Создать директории приложения
 echo "--- [4/9] Creating application directories ---"
-mkdir -p /opt/family_chat/config
-mkdir -p /opt/family_chat/data
-mkdir -p /opt/family_chat/migrations
-chown -R devuser:devuser /opt/family_chat
+mkdir -p ~/family_chat/config
+mkdir -p ~/family_chat/data
+mkdir -p ~/family_chat/migrations
+chown -R devuser:devuser ~/family_chat
 
 # Разрешить devuser перезапускать сервис без пароля sudo
 echo "devuser ALL=(ALL) NOPASSWD: /bin/systemctl restart family-chat, /bin/systemctl status family-chat, /bin/systemctl start family-chat, /bin/systemctl stop family-chat" \
@@ -73,7 +73,7 @@ echo ""
 
 # 6. Создать production.yaml
 echo "--- [6/9] Creating production.yaml ---"
-cat > /opt/family_chat/config/production.yaml << EOF
+cat > ~/family_chat/config/production.yaml << EOF
 apiServer:
   port: 8080
   publicHost: $DOMAIN
@@ -107,12 +107,12 @@ maxRequestSize: 25165824  # 24 MB
 sessionLogs:
   consoleEnabled: true
 EOF
-chown devuser:devuser /opt/family_chat/config/production.yaml
-echo "  => /opt/family_chat/config/production.yaml created"
+chown devuser:devuser ~/family_chat/config/production.yaml
+echo "  => ~/family_chat/config/production.yaml created"
 
 # 7. Создать placeholder passwords.yaml (будет перезаписан CI/CD)
 echo "--- [7/9] Creating placeholder passwords.yaml ---"
-cat > /opt/family_chat/config/passwords.yaml << EOF
+cat > ~/family_chat/config/passwords.yaml << EOF
 # ВНИМАНИЕ: Этот файл будет перезаписан CI/CD при каждом деплое.
 # Не редактируйте вручную — изменения будут потеряны.
 production:
@@ -122,8 +122,8 @@ production:
   jwtHmacSha512PrivateKey: 'PLACEHOLDER_SET_BY_CICD'
   jwtRefreshTokenHashPepper: 'PLACEHOLDER_SET_BY_CICD'
 EOF
-chown devuser:devuser /opt/family_chat/config/passwords.yaml
-chmod 600 /opt/family_chat/config/passwords.yaml
+chown devuser:devuser ~/family_chat/config/passwords.yaml
+chmod 600 ~/family_chat/config/passwords.yaml
 
 # 8. Создать systemd service
 echo "--- [8/9] Creating systemd service ---"
@@ -136,8 +136,8 @@ Wants=postgresql.service
 [Service]
 Type=simple
 User=devuser
-WorkingDirectory=/opt/family_chat
-ExecStart=/opt/family_chat/family_chat_server_bin --mode production --apply-migrations
+WorkingDirectory=~/family_chat
+ExecStart=~/family_chat/family_chat_server_bin --mode production --apply-migrations
 Restart=always
 RestartSec=5
 StandardOutput=journal
@@ -146,7 +146,7 @@ SyslogIdentifier=family-chat
 
 # Serverpod passwords (YAML-файл, перезаписывается CI/CD)
 # Serverpod также поддерживает env vars вида SERVERPOD_PASSWORD_<key>
-EnvironmentFile=-/opt/family_chat/config/passwords.env
+EnvironmentFile=-~/family_chat/config/passwords.env
 
 # Admin seeding — заполните перед ПЕРВЫМ запуском, затем очистите через update_admin_env.sh
 Environment="ADMIN_EMAIL="
