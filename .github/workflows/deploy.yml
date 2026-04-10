@@ -50,7 +50,7 @@ jobs:
         id: deployment
 
   # ────────────────────────────────────────────────────────────────
-  # Job 2: Build Dart Server → Deploy to VPS
+  # Job 2: Build Dart Server → Deploy to VPS.
   # ────────────────────────────────────────────────────────────────
   deploy-server:
     runs-on: ubuntu-latest
