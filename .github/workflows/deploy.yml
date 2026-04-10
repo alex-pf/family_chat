@@ -78,7 +78,7 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_IP }}
-          username: deploy
+          username: devuser
           key: ${{ secrets.VPS_SERVER_KEY }}
           script: |
             mkdir -p ~/family_chat/config
@@ -88,7 +88,7 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_IP }}
-          username: deploy
+          username: devuser
           key: ${{ secrets.VPS_SERVER_KEY }}
           script: |
             cat > ~/family_chat/config/passwords.yaml << 'YAML'
@@ -105,7 +105,7 @@ jobs:
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VPS_IP }}
-          username: deploy
+          username: devuser
           key: ${{ secrets.VPS_SERVER_KEY }}
           source: >-
             family_chat_sp_server/family_chat_server_bin,
@@ -118,7 +118,7 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_IP }}
-          username: deploy
+          username: devuser
           key: ${{ secrets.VPS_SERVER_KEY }}
           script: |
             chmod +x ~/family_chat/family_chat_server_bin
