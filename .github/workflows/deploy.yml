@@ -96,4 +96,33 @@ jobs:
               database: '${{ secrets.DB_PASSWORD }}'
               serviceSecret: '${{ secrets.SERVICE_SECRET }}'
               emailSecretHashPepper: '${{ secrets.EMAIL_PEPPER }}'
-              jwtHmacSha512PrivateKey: '${{ secrets.JWT_PRIVATE_KEY
+              jwtHmacSha512PrivateKey: '${{ secrets.JWT_PRIVATE_KEY }}'
+              jwtRefreshTokenHashPepper: '${{ secrets.JWT_REFRESH_PEPPER }}'
+            YAML
+            chmod 600 ~/family_chat/config/passwords.yaml
+
+      - name: Copy artifacts to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_IP }}
+          username: deploy
+          key: ${{ secrets.VPS_SERVER_KEY }}
+          source: >-
+            family_chat_sp_server/family_chat_server_bin,
+            family_chat_sp_server/config/production.yaml,
+            family_chat_sp_server/migrations/
+          target: ~/family_chat/
+          strip_components: 1
+
+      - name: Restart server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_IP }}
+          username: deploy
+          key: ${{ secrets.VPS_SERVER_KEY }}
+          script: |
+            chmod +x ~/family_chat/family_chat_server_bin
+            sudo systemctl restart family-chat
+            sleep 5
+            sudo systemctl status family-chat --no-pager -l
+            sudo journalctl -u family-chat -n 100 --no-pager
