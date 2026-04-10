@@ -66,7 +66,7 @@ jobs:
       - name: Compile Serverpod server
         working-directory: family_chat_sp_server
         run: |
-          dart pub get
+          flutter pub get
           dart compile exe bin/main.dart -o family_chat_server_bin
 
       # Write Serverpod passwords.yaml from GitHub Secrets (never committed to git)
