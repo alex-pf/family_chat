@@ -77,8 +77,8 @@ jobs:
           username: deploy
           key: ${{ secrets.VPS_SERVER_KEY }}
           script: |
-            mkdir -p /opt/family_chat/config
-            cat > /opt/family_chat/config/passwords.yaml << 'YAML'
+            mkdir -p ~/family_chat/config
+            cat > ~/family_chat/config/passwords.yaml << 'YAML'
             production:
               database: '${{ secrets.DB_PASSWORD }}'
               serviceSecret: '${{ secrets.SERVICE_SECRET }}'
@@ -86,7 +86,7 @@ jobs:
               jwtHmacSha512PrivateKey: '${{ secrets.JWT_PRIVATE_KEY }}'
               jwtRefreshTokenHashPepper: '${{ secrets.JWT_REFRESH_PEPPER }}'
             YAML
-            chmod 600 /opt/family_chat/config/passwords.yaml
+            chmod 600 ~/family_chat/config/passwords.yaml
 
       # Patch production.yaml with real domain before uploading
       - name: Patch production.yaml
@@ -116,7 +116,7 @@ jobs:
           username: deploy
           key: ${{ secrets.VPS_SERVER_KEY }}
           script: |
-            chmod +x /opt/family_chat/family_chat_server_bin
+            chmod +x ~/family_chat/family_chat_server_bin
             sudo systemctl restart family-chat
             sleep 3
             sudo systemctl status family-chat --no-pager -l
