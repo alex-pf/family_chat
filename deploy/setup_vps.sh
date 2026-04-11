@@ -1,133 +1,84 @@
 #!/bin/bash
 # ============================================================
-# FamilyChat — Подготовка VPS (выполняется один раз от root)
+# FamilyChat — Подготовка нового VPS (выполняется от root)
 # ============================================================
-# Этот скрипт делает только то, что требует root и не может
-# быть сделано через GitHub Actions (devuser не имеет sudo apt).
+# Этот скрипт делает ТОЛЬКО одно: прописывает SSH-ключ для root,
+# чтобы GitHub Actions мог зайти и всё остальное сделать сам.
 #
-# Всё остальное (nginx config, systemd, SSL, DB, первый деплой)
-# автоматизировано в .github/workflows/first_deploy.yml
+# После запуска этого скрипта — запустите GitHub Actions workflow
+# "First Deploy — VPS Setup" и он автоматически:
+#   - установит пакеты (nginx, postgresql, certbot)
+#   - создаст БД и пользователя
+#   - скопирует SSH-ключ для USER_NAME
+#   - настроит systemd, nginx, SSL
+#   - скомпилирует и задеплоит сервер и Flutter Web
 #
-# Использование:
-#   ssh root@<VPS_IP>
-#   bash <(curl -fsSL https://raw.githubusercontent.com/alex-pf/family_chat/main/deploy/setup_vps.sh) <domain>
+# ────────────────────────────────────────────────────────────────
+# КАК СГЕНЕРИРОВАТЬ SSH-КЛЮЧ (одна пара для root и USER_NAME):
 #
-# Пример:
-#   bash setup_vps.sh chat.example.com
+#   На локальной машине:
+#     ssh-keygen -t ed25519 -C "family-chat-deploy" -f ~/.ssh/family_chat_deploy
+#
+#   Это создаст два файла:
+#     ~/.ssh/family_chat_deploy      — приватный ключ → GitHub Secret VPS_SERVER_KEY
+#     ~/.ssh/family_chat_deploy.pub  — публичный ключ → прописать на VPS (см. ниже)
+#
+# ────────────────────────────────────────────────────────────────
+# ИСПОЛЬЗОВАНИЕ:
+#
+#   1. Скопируйте публичный ключ:
+#        cat ~/.ssh/family_chat_deploy.pub
+#
+#   2. Зайдите на VPS как root и запустите этот скрипт,
+#      передав публичный ключ как аргумент:
+#
+#        ssh root@<VPS_IP>
+#        bash <(curl -fsSL https://raw.githubusercontent.com/alex-pf/family_chat/main/deploy/setup_vps.sh) \
+#          "ВАШ_ПУБЛИЧНЫЙ_КЛЮЧ"
+#
+#   3. Добавьте в GitHub Secrets:
+#        VPS_SERVER_KEY     — содержимое ~/.ssh/family_chat_deploy (приватный ключ)
+#        VPS_IP             — IP этого сервера
+#        USER_NAME          — имя вашего пользователя (например: devuser)
+#        SERVER_DOMAIN      — домен (например: chat.example.com)
+#        DB_PASSWORD        — пароль PostgreSQL (придумайте сами)
+#        SERVICE_SECRET     — openssl rand -hex 32
+#        EMAIL_PEPPER       — openssl rand -hex 32
+#        JWT_PRIVATE_KEY    — openssl rand -hex 64
+#        JWT_REFRESH_PEPPER — openssl rand -hex 32
+#
+#   4. Запустите в GitHub:
+#        Actions → "First Deploy — VPS Setup" → Run workflow
+#        Укажите: домен, admin email, начальный пароль
+#
+# ============================================================
 
 set -e
 
-DOMAIN="${1:-YOUR_DOMAIN.COM}"
+PUBLIC_KEY="$1"
 
-echo "=== FamilyChat VPS Pre-Setup ==="
-echo "Domain: $DOMAIN"
-echo ""
-
-# ────────────────────────────────────────────────────────────────
-# 1. Системные пакеты
-# ────────────────────────────────────────────────────────────────
-echo "--- [1/4] Installing packages ---"
-apt-get update -qq
-apt-get install -y -qq \
-  nginx postgresql postgresql-contrib \
-  certbot python3-certbot-nginx \
-  curl gnupg ufw
-
-# ────────────────────────────────────────────────────────────────
-# 2. Пользователь devuser (если ещё не существует)
-# ────────────────────────────────────────────────────────────────
-echo "--- [2/4] Ensuring devuser exists ---"
-if ! id devuser &>/dev/null; then
-  useradd -m -s /bin/bash devuser
-  echo "  => User 'devuser' created"
-else
-  echo "  => User 'devuser' already exists"
+if [ -z "$PUBLIC_KEY" ]; then
+  echo "Использование: bash setup_vps.sh \"ВАШ_ПУБЛИЧНЫЙ_SSH_КЛЮЧ\""
+  echo ""
+  echo "Пример:"
+  echo "  bash setup_vps.sh \"ssh-ed25519 AAAA... family-chat-deploy\""
+  exit 1
 fi
 
-DEV_HOME=$(getent passwd devuser | cut -d: -f6)
+echo "=== FamilyChat — Регистрация SSH-ключа на VPS ==="
 
-# Убедиться что .ssh настроен
-mkdir -p "$DEV_HOME/.ssh"
-touch "$DEV_HOME/.ssh/authorized_keys"
-chmod 700 "$DEV_HOME/.ssh"
-chmod 600 "$DEV_HOME/.ssh/authorized_keys"
-chown -R devuser:devuser "$DEV_HOME/.ssh"
+# Прописать ключ для root
+mkdir -p /root/.ssh
+touch /root/.ssh/authorized_keys
+chmod 700 /root/.ssh
+chmod 600 /root/.ssh/authorized_keys
 
+# Добавить только если ещё нет
+grep -qF "$PUBLIC_KEY" /root/.ssh/authorized_keys || \
+  echo "$PUBLIC_KEY" >> /root/.ssh/authorized_keys
+
+echo "  => SSH ключ добавлен в /root/.ssh/authorized_keys"
 echo ""
-echo "  *** ВАЖНО: Добавьте публичный SSH-ключ в $DEV_HOME/.ssh/authorized_keys ***"
-echo "  Приватный ключ должен быть в GitHub Secret VPS_SERVER_KEY"
-echo ""
-
-# ────────────────────────────────────────────────────────────────
-# 3. Firewall
-# ────────────────────────────────────────────────────────────────
-echo "--- [3/4] Configuring firewall ---"
-ufw allow OpenSSH
-ufw allow 80/tcp
-ufw allow 443/tcp
-ufw --force enable
-echo "  => UFW: SSH + 80 + 443 открыты"
-
-# ────────────────────────────────────────────────────────────────
-# 4. PostgreSQL — создать пользователя и БД
-#    (CI не может этого сделать, т.к. нужен доступ к postgres)
-# ────────────────────────────────────────────────────────────────
-echo "--- [4/4] PostgreSQL setup ---"
-
-# Попросить пароль для БД
-echo ""
-echo "Введите пароль для пользователя family_chat_user PostgreSQL"
-echo "(он же GitHub Secret DB_PASSWORD):"
-read -s DB_PASS
-echo ""
-
-sudo -u postgres psql << SQL
-DO \$\$
-BEGIN
-  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'family_chat_user') THEN
-    CREATE USER family_chat_user WITH PASSWORD '$DB_PASS';
-    RAISE NOTICE 'User family_chat_user created';
-  ELSE
-    ALTER USER family_chat_user WITH PASSWORD '$DB_PASS';
-    RAISE NOTICE 'User family_chat_user password updated';
-  END IF;
-END
-\$\$;
-
-SELECT 'CREATE DATABASE family_chat_db OWNER family_chat_user'
-WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'family_chat_db')\gexec
-
-GRANT ALL PRIVILEGES ON DATABASE family_chat_db TO family_chat_user;
-SQL
-
-echo "  => PostgreSQL ready: family_chat_db / family_chat_user"
-
-# ────────────────────────────────────────────────────────────────
-# Готово — дальше всё через GitHub Actions
-# ────────────────────────────────────────────────────────────────
-echo ""
-echo "============================================"
-echo "=== Pre-Setup Complete! ==="
-echo "============================================"
-echo ""
-echo "Следующие шаги:"
-echo ""
-echo "1. Добавьте публичный SSH-ключ:"
-echo "   echo 'ВАШ_ПУБЛИЧНЫЙ_КЛЮЧ' >> $DEV_HOME/.ssh/authorized_keys"
-echo ""
-echo "2. Убедитесь что все GitHub Secrets добавлены:"
-echo "   VPS_IP              — IP этого сервера"
-echo "   VPS_SERVER_KEY      — приватный SSH-ключ devuser"
-echo "   SERVER_DOMAIN       — $DOMAIN"
-echo "   DB_PASSWORD         — пароль который вы только что ввели"
-echo "   SERVICE_SECRET      — openssl rand -hex 32"
-echo "   EMAIL_PEPPER        — openssl rand -hex 32"
-echo "   JWT_PRIVATE_KEY     — openssl rand -hex 64"
-echo "   JWT_REFRESH_PEPPER  — openssl rand -hex 32"
-echo "   ADMIN_EMAIL         — email первого администратора"
-echo "   ADMIN_INITIAL_PASSWORD — начальный пароль администратора"
-echo ""
-echo "3. Запустите GitHub Actions workflow:"
-echo "   Actions → 'First Deploy — VPS Setup' → Run workflow"
-echo "   Укажите домен: $DOMAIN"
+echo "Теперь запустите GitHub Actions workflow:"
+echo "  Actions → 'First Deploy — VPS Setup' → Run workflow"
 echo ""

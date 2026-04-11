@@ -2,6 +2,18 @@ name: First Deploy — VPS Setup
 
 # Запускается ТОЛЬКО вручную, один раз при первоначальной настройке нового сервера.
 # После успешного выполнения используйте обычный workflow "Deploy FamilyChat".
+#
+# Требуемые GitHub Secrets:
+#   VPS_IP               — IP сервера
+#   VPS_SERVER_KEY       — приватный SSH-ключ (один для root и USER_NAME)
+#   USER_NAME            — имя deploy-пользователя (например: devuser)
+#   SERVER_DOMAIN        — домен сервера (используется при сборке Flutter)
+#   DB_PASSWORD          — пароль PostgreSQL
+#   SERVICE_SECRET       — openssl rand -hex 32
+#   EMAIL_PEPPER         — openssl rand -hex 32
+#   JWT_PRIVATE_KEY      — openssl rand -hex 64
+#   JWT_REFRESH_PEPPER   — openssl rand -hex 32
+#
 on:
   workflow_dispatch:
     inputs:
@@ -20,44 +32,92 @@ on:
 
 jobs:
   # ────────────────────────────────────────────────────────────────
-  # Шаг 1: Подготовка сервера (пакеты, PostgreSQL, папки, systemd)
+  # Шаг 1: root — установка пакетов, PostgreSQL, sudoers
+  # Заходим как root, используя тот же ключ VPS_SERVER_KEY
+  # (ключ должен быть прописан в /root/.ssh/authorized_keys)
   # ────────────────────────────────────────────────────────────────
-  setup-vps:
-    name: Setup VPS
+  bootstrap-root:
+    name: Bootstrap (root)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-
-      - name: Install packages, create DB, configure systemd & nginx
+      - name: Install packages & configure PostgreSQL
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_IP }}
-          username: devuser
+          username: root
           key: ${{ secrets.VPS_SERVER_KEY }}
           script: |
             set -e
-            DOMAIN="${{ github.event.inputs.server_domain }}"
-            DEV_HOME="$HOME"
+            USER="${{ secrets.USER_NAME }}"
+            USER_HOME=$(getent passwd "$USER" | cut -d: -f6)
 
-            echo "=== [1/6] Installing system packages ==="
-            sudo apt-get update -qq
-            sudo apt-get install -y -qq nginx postgresql postgresql-contrib certbot python3-certbot-nginx curl gnupg
+            echo "=== [1/4] Installing system packages ==="
+            apt-get update -qq
+            apt-get install -y -qq \
+              nginx postgresql postgresql-contrib \
+              certbot python3-certbot-nginx \
+              curl gnupg ufw
 
-            echo "=== [2/6] Configuring PostgreSQL ==="
-            # Создать пользователя и БД (если ещё не существуют)
+            echo "=== [2/4] Ensuring user $USER exists ==="
+            id "$USER" &>/dev/null || useradd -m -s /bin/bash "$USER"
+            USER_HOME=$(getent passwd "$USER" | cut -d: -f6)
+
+            # Прописать тот же SSH-ключ для USER_NAME
+            mkdir -p "$USER_HOME/.ssh"
+            # Копируем authorized_keys из root (ключ уже там — он нас сюда пустил)
+            cp /root/.ssh/authorized_keys "$USER_HOME/.ssh/authorized_keys"
+            chmod 700 "$USER_HOME/.ssh"
+            chmod 600 "$USER_HOME/.ssh/authorized_keys"
+            chown -R "$USER:$USER" "$USER_HOME/.ssh"
+            echo "  => SSH key copied to $USER"
+
+            echo "=== [3/4] PostgreSQL ==="
             sudo -u postgres psql -tc "SELECT 1 FROM pg_roles WHERE rolname='family_chat_user'" | grep -q 1 || \
               sudo -u postgres psql -c "CREATE USER family_chat_user WITH PASSWORD '${{ secrets.DB_PASSWORD }}';"
+            sudo -u postgres psql -c "ALTER USER family_chat_user WITH PASSWORD '${{ secrets.DB_PASSWORD }}';"
             sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='family_chat_db'" | grep -q 1 || \
               sudo -u postgres psql -c "CREATE DATABASE family_chat_db OWNER family_chat_user;"
             sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE family_chat_db TO family_chat_user;"
             echo "  => PostgreSQL ready"
 
-            echo "=== [3/6] Creating application directories ==="
+            echo "=== [4/4] Sudoers for $USER ==="
+            echo "$USER ALL=(ALL) NOPASSWD: /bin/systemctl restart family-chat, /bin/systemctl start family-chat, /bin/systemctl stop family-chat, /bin/systemctl status family-chat, /bin/systemctl daemon-reload, /bin/systemctl reload nginx, /bin/systemctl stop nginx, /bin/systemctl start nginx, /usr/bin/certbot" \
+              > /etc/sudoers.d/deploy-family-chat
+            chmod 440 /etc/sudoers.d/deploy-family-chat
+
+            echo "=== Firewall ==="
+            ufw allow OpenSSH
+            ufw allow 80/tcp
+            ufw allow 443/tcp
+            ufw --force enable
+            echo "  => Done"
+
+  # ────────────────────────────────────────────────────────────────
+  # Шаг 2: USER_NAME — папки, production.yaml, systemd, nginx
+  # ────────────────────────────────────────────────────────────────
+  setup-vps:
+    name: Setup VPS (app config)
+    runs-on: ubuntu-latest
+    needs: bootstrap-root
+    steps:
+      - name: Create directories, configs, systemd service & nginx
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_IP }}
+          username: ${{ secrets.USER_NAME }}
+          key: ${{ secrets.VPS_SERVER_KEY }}
+          script: |
+            set -e
+            DOMAIN="${{ github.event.inputs.server_domain }}"
+            DEV_HOME="$HOME"
+            USER="${{ secrets.USER_NAME }}"
+
+            echo "=== [1/3] Creating application directories ==="
             mkdir -p "$DEV_HOME/family_chat/config"
             mkdir -p "$DEV_HOME/family_chat/migrations"
             mkdir -p "$DEV_HOME/family_chat/data"
 
-            echo "=== [4/6] Writing production.yaml ==="
+            echo "=== [2/3] Writing production.yaml ==="
             cat > "$DEV_HOME/family_chat/config/production.yaml" << EOF
             apiServer:
               port: 8080
@@ -93,7 +153,7 @@ jobs:
               consoleEnabled: true
             EOF
 
-            echo "=== [5/6] Creating systemd service ==="
+            echo "=== [3/3] Creating systemd service ==="
             sudo tee /etc/systemd/system/family-chat.service > /dev/null << EOF
             [Unit]
             Description=FamilyChat Server (Serverpod)
@@ -102,7 +162,7 @@ jobs:
 
             [Service]
             Type=simple
-            User=devuser
+            User=$USER
             WorkingDirectory=$DEV_HOME/family_chat
             ExecStart=$DEV_HOME/family_chat/family_chat_server_bin --mode production --apply-migrations
             Restart=always
@@ -117,16 +177,11 @@ jobs:
             WantedBy=multi-user.target
             EOF
 
-            # Разрешить devuser управлять сервисом без пароля
-            echo "devuser ALL=(ALL) NOPASSWD: /bin/systemctl restart family-chat, /bin/systemctl start family-chat, /bin/systemctl stop family-chat, /bin/systemctl status family-chat, /bin/systemctl daemon-reload, /bin/systemctl reload nginx" \
-              | sudo tee /etc/sudoers.d/devuser-family-chat > /dev/null
-            sudo chmod 440 /etc/sudoers.d/devuser-family-chat
-
             sudo systemctl daemon-reload
             sudo systemctl enable family-chat
             echo "  => systemd service enabled"
 
-            echo "=== [6/6] Configuring Nginx ==="
+            echo "=== Configuring Nginx ==="
             sudo tee /etc/nginx/sites-available/family-chat > /dev/null << 'NGINX'
             map $http_upgrade $connection_upgrade {
                 default upgrade;
@@ -170,16 +225,14 @@ jobs:
             }
             NGINX
 
-            # Подставить реальный домен
             sudo sed -i "s/DOMAIN_PLACEHOLDER/$DOMAIN/g" /etc/nginx/sites-available/family-chat
-
             sudo rm -f /etc/nginx/sites-enabled/default
             sudo ln -sf /etc/nginx/sites-available/family-chat /etc/nginx/sites-enabled/family-chat
             sudo nginx -t
-            echo "  => Nginx configured (SSL cert not yet obtained)"
+            echo "  => Nginx configured (SSL not yet obtained)"
 
   # ────────────────────────────────────────────────────────────────
-  # Шаг 2: Получить SSL-сертификат через certbot (standalone)
+  # Шаг 3: Получить SSL-сертификат
   # ────────────────────────────────────────────────────────────────
   obtain-ssl:
     name: Obtain SSL Certificate
@@ -190,27 +243,25 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_IP }}
-          username: devuser
+          username: ${{ secrets.USER_NAME }}
           key: ${{ secrets.VPS_SERVER_KEY }}
           script: |
             set -e
             DOMAIN="${{ github.event.inputs.server_domain }}"
+            ADMIN_EMAIL="${{ github.event.inputs.admin_email }}"
 
-            # Остановить nginx чтобы освободить порт 80 для certbot standalone
             sudo systemctl stop nginx
-
             sudo certbot certonly --standalone \
               --non-interactive \
               --agree-tos \
-              --email "${{ github.event.inputs.admin_email }}" \
+              --email "$ADMIN_EMAIL" \
               -d "$DOMAIN"
-
             sudo systemctl start nginx
             sudo nginx -t && sudo systemctl reload nginx
             echo "  => SSL certificate obtained for $DOMAIN"
 
   # ────────────────────────────────────────────────────────────────
-  # Шаг 3: Собрать и задеплоить сервер (первый раз)
+  # Шаг 4a + 4b: Сборка сервера и Flutter — параллельно
   # ────────────────────────────────────────────────────────────────
   first-server-deploy:
     name: Build & Deploy Server
@@ -233,13 +284,13 @@ jobs:
       - name: Patch production.yaml with domain
         working-directory: family_chat_sp_server
         run: |
-          sed -i "s/DOMAIN_PLACEHOLDER/${{ secrets.SERVER_DOMAIN }}/g" config/production.yaml
+          sed -i "s/DOMAIN_PLACEHOLDER/${{ github.event.inputs.server_domain }}/g" config/production.yaml
 
       - name: Write passwords.yaml on VPS
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_IP }}
-          username: devuser
+          username: ${{ secrets.USER_NAME }}
           key: ${{ secrets.VPS_SERVER_KEY }}
           script: |
             cat > ~/family_chat/config/passwords.yaml << 'YAML'
@@ -252,11 +303,11 @@ jobs:
             YAML
             chmod 600 ~/family_chat/config/passwords.yaml
 
-      - name: Copy binary & migrations to VPS
+      - name: Copy binary, config & migrations to VPS
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VPS_IP }}
-          username: devuser
+          username: ${{ secrets.USER_NAME }}
           key: ${{ secrets.VPS_SERVER_KEY }}
           source: >-
             family_chat_sp_server/family_chat_server_bin,
@@ -265,11 +316,11 @@ jobs:
           target: ~/family_chat/
           strip_components: 1
 
-      - name: Start server
+      - name: Start server & verify
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_IP }}
-          username: devuser
+          username: ${{ secrets.USER_NAME }}
           key: ${{ secrets.VPS_SERVER_KEY }}
           script: |
             chmod +x ~/family_chat/family_chat_server_bin
@@ -279,9 +330,6 @@ jobs:
             echo ""
             sudo journalctl -u family-chat -n 30 --no-pager
 
-  # ────────────────────────────────────────────────────────────────
-  # Шаг 4: Собрать и задеплоить Flutter Web (первый раз)
-  # ────────────────────────────────────────────────────────────────
   first-flutter-deploy:
     name: Build & Deploy Flutter Web
     runs-on: ubuntu-latest
