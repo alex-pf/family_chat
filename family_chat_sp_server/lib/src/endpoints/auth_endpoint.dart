@@ -61,6 +61,73 @@ class AuthEndpoint extends Endpoint {
   }
 
   // ──────────────────────────────────────────────────────────────────────────
+  // Admin: list pending access requests
+  // ──────────────────────────────────────────────────────────────────────────
+
+  /// Returns a list of emails from unread 'ask_admin' notifications.
+  /// Admin only.
+  Future<List<String>> getPendingRequests(Session session) async {
+    await requireAdmin(session);
+
+    final caller = await getAuthenticatedAppUser(session);
+    final notifications = await AppNotification.db.find(
+      session,
+      where: (t) =>
+          t.recipientUserId.equals(caller.id!) &
+          t.type.equals('ask_admin') &
+          t.isRead.equals(false),
+    );
+
+    // Extract emails from notification body: "User <email> is requesting access."
+    final emails = <String>[];
+    for (final n in notifications) {
+      final match = RegExp(r'User (.+?) is requesting access').firstMatch(n.body);
+      if (match != null) {
+        emails.add(match.group(1)!);
+      }
+    }
+    return emails;
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Admin: issue access token for a requesting email
+  // ──────────────────────────────────────────────────────────────────────────
+
+  /// Admin issues a one-time token for a user who requested access by email.
+  /// Marks the corresponding notification as read.
+  Future<String> issueAccessToken(Session session, String email) async {
+    await requireAdmin(session);
+
+    // Find the user by email.
+    final requestingUser = await AppUser.db.findFirstRow(
+      session,
+      where: (t) => t.email.equals(email),
+    );
+    if (requestingUser == null) {
+      throw Exception('User not found for email: $email');
+    }
+
+    // Mark the related notification as read.
+    final caller = await getAuthenticatedAppUser(session);
+    final notifications = await AppNotification.db.find(
+      session,
+      where: (t) =>
+          t.recipientUserId.equals(caller.id!) &
+          t.type.equals('ask_admin') &
+          t.isRead.equals(false),
+    );
+    for (final n in notifications) {
+      if (n.body.contains(email)) {
+        n.isRead = true;
+        await AppNotification.db.updateRow(session, n);
+      }
+    }
+
+    // Delegate to approveAskAdmin which creates the token.
+    return approveAskAdmin(session, requestingUser.id!);
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
   // Admin: approve a request and issue a one-time token
   // ──────────────────────────────────────────────────────────────────────────
 

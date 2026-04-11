@@ -230,6 +230,19 @@ class _ManageUserDialogState extends State<_ManageUserDialog> {
   bool _checkingDelete = false;
   bool? _hasChats; // true = есть чаты, false = нет, null = не проверено
 
+  // Password reset fields
+  final _pwController = TextEditingController();
+  bool _obscurePw = true;
+  bool _savingPw = false;
+  bool _pwSaved = false;
+  bool _forceChange = true;
+
+  @override
+  void dispose() {
+    _pwController.dispose();
+    super.dispose();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -276,6 +289,37 @@ class _ManageUserDialogState extends State<_ManageUserDialog> {
         );
         setState(() => _savingBlock = false);
       }
+    }
+  }
+
+
+  // ── Сменить пароль ──────────────────────────────────────────────
+  Future<void> _savePassword() async {
+    final pw = _pwController.text.trim();
+    if (pw.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Минимум 6 символов')),
+      );
+      return;
+    }
+    setState(() => _savingPw = true);
+    try {
+      await client.admin.resetUserPassword(
+        widget.user.id!,
+        pw,
+        forceChange: _forceChange,
+      );
+      setState(() => _pwSaved = true);
+      _pwController.clear();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Пароль изменён')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Ошибка: $e')),
+      );
+    } finally {
+      setState(() => _savingPw = false);
     }
   }
 
@@ -413,6 +457,46 @@ class _ManageUserDialogState extends State<_ManageUserDialog> {
                       color: cs.onSurfaceVariant,
                     ),
               contentPadding: EdgeInsets.zero,
+            ),
+
+            const SizedBox(height: 16),
+            const Divider(),
+            const Text('Сменить пароль', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _pwController,
+                    obscureText: _obscurePw,
+                    decoration: InputDecoration(
+                      labelText: 'Новый пароль',
+                      border: const OutlineInputBorder(),
+                      suffixIcon: IconButton(
+                        icon: Icon(_obscurePw ? Icons.visibility : Icons.visibility_off),
+                        onPressed: () => setState(() => _obscurePw = !_obscurePw),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                _savingPw
+                    ? const CircularProgressIndicator()
+                    : IconButton(
+                        icon: Icon(_pwSaved ? Icons.check_circle : Icons.save),
+                        color: _pwSaved ? Colors.green : null,
+                        onPressed: _savePassword,
+                        tooltip: 'Сохранить пароль',
+                      ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            CheckboxListTile(
+              title: const Text('Потребовать смену при входе'),
+              value: _forceChange,
+              onChanged: (v) => setState(() => _forceChange = v ?? true),
+              controlAffinity: ListTileControlAffinity.leading,
+              dense: true,
             ),
 
             const SizedBox(height: 16),

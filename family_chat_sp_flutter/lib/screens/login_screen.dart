@@ -21,12 +21,16 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePassword = true;
   bool _isLoading = false;
   String? _errorMessage;
+  final _tokenController = TextEditingController();
+  bool _tokenExpanded = false;
+  bool _tokenLoading = false;
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     _askEmailController.dispose();
+    _tokenController.dispose();
     super.dispose();
   }
 
@@ -70,6 +74,50 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _loginWithToken() async {
+    final token = _tokenController.text.trim();
+    if (token.isEmpty) return;
+
+    setState(() {
+      _tokenLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      await client.auth.loginWithToken(token);
+      if (!mounted) return;
+
+      // Token accepted — the user's account is now active.
+      // Show a dialog telling them to log in with their credentials.
+      _tokenController.clear();
+      setState(() => _tokenExpanded = false);
+
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          icon: const Icon(Icons.check_circle, color: Colors.green, size: 48),
+          title: const Text('Токен принят'),
+          content: const Text(
+            'Ваш аккаунт активирован.\n'
+            'Войдите с email и паролем, которые вам выдал администратор.',
+          ),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Ошибка токена: $e';
+      });
+    } finally {
+      if (mounted) setState(() => _tokenLoading = false);
+    }
+  }
+
   void _showAskAdminDialog() {
     _askEmailController.clear();
     showDialog(
@@ -101,16 +149,25 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           FilledButton(
             onPressed: () async {
+              final email = _askEmailController.text.trim();
+              if (email.isEmpty) return;
               Navigator.pop(ctx);
-              // TODO: вызов client.auth.askAdmin(email: _askEmailController.text)
-              // после serverpod generate для нашего AuthEndpoint
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Запрос отправлен. Ожидайте одобрения.'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
+              try {
+                await client.auth.askAdmin(email);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Запрос отправлен. Ожидайте одобрения.'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Ошибка отправки: $e')),
+                  );
+                }
               }
             },
             child: const Text('Отправить'),
@@ -249,6 +306,45 @@ class _LoginScreenState extends State<LoginScreen> {
                             color: theme.colorScheme.onSurfaceVariant),
                       ),
                     ),
+                    const SizedBox(height: 8),
+                    // Войти по токену
+                    TextButton(
+                      onPressed: () =>
+                          setState(() => _tokenExpanded = !_tokenExpanded),
+                      child: Text(
+                        'Войти по токену',
+                        style: TextStyle(
+                            color: theme.colorScheme.onSurfaceVariant),
+                      ),
+                    ),
+                    if (_tokenExpanded) ...[
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _tokenController,
+                        decoration: const InputDecoration(
+                          labelText: 'Токен доступа',
+                          prefixIcon: Icon(Icons.vpn_key_outlined),
+                        ),
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) => _loginWithToken(),
+                      ),
+                      const SizedBox(height: 12),
+                      FilledButton(
+                        onPressed: _tokenLoading ? null : _loginWithToken,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: theme.colorScheme.tertiary,
+                          foregroundColor: theme.colorScheme.onTertiary,
+                        ),
+                        child: _tokenLoading
+                            ? const SizedBox(
+                                height: 22,
+                                width: 22,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2.5, color: Colors.white),
+                              )
+                            : const Text('Войти'),
+                      ),
+                    ],
                   ],
                 ),
               ),

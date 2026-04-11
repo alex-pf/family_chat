@@ -272,6 +272,37 @@ class AdminEndpoint extends Endpoint {
     }
   }
 
+  /// Resets the password for a user (admin only).
+  /// If [forceChange] is true, sets mustChangePassword on the AppUser.
+  Future<void> resetUserPassword(
+    Session session,
+    int userId,
+    String newPassword, {
+    bool forceChange = true,
+  }) async {
+    await requireAdmin(session);
+
+    final appUser = await AppUser.db.findById(session, userId);
+    if (appUser == null) throw Exception('User not found: $userId');
+    if (appUser.serverpodUserId == null) {
+      throw Exception('No Serverpod auth account linked to this user');
+    }
+
+    // Reset password via Serverpod's email IDP admin API.
+    final emailIdp = AuthServices.getIdentityProvider<EmailIdp>();
+    await emailIdp.admin.updatePassword(
+      session,
+      authUserId: int.parse(appUser.serverpodUserId!),
+      password: newPassword,
+    );
+
+    // Optionally mark mustChangePassword.
+    if (forceChange) {
+      appUser.mustChangePassword = true;
+      await AppUser.db.updateRow(session, appUser);
+    }
+  }
+
   // ──────────────────────────────────────────────────────────────────────────
   // Chat management
   // ──────────────────────────────────────────────────────────────────────────

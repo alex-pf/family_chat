@@ -6,6 +6,7 @@ import 'package:timeago/timeago.dart' as timeago;
 
 import '../main.dart';
 import '../app_state.dart';
+import '../widgets/admin_requests_banner.dart';
 import '../widgets/chat_list_tile.dart';
 import '../widgets/user_avatar.dart';
 import 'login_screen.dart';
@@ -327,6 +328,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
+
+              // Admin pending requests
+              if (appState.isAdmin) const AdminRequestsBanner(),
 
               // Chat list
               Expanded(

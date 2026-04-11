@@ -413,6 +413,21 @@ class EndpointAdmin extends _i2.EndpointRef {
         'deleteFilesOlderThan',
         {'days': days},
       );
+
+  /// Resets the password for a user (admin only).
+  _i3.Future<void> resetUserPassword(
+    int userId,
+    String newPassword, {
+    bool forceChange = true,
+  }) => caller.callServerEndpoint<void>(
+    'admin',
+    'resetUserPassword',
+    {
+      'userId': userId,
+      'newPassword': newPassword,
+      'forceChange': forceChange,
+    },
+  );
 }
 
 /// Custom auth endpoint that layers on top of Serverpod's built-in auth.
@@ -457,6 +472,23 @@ class EndpointAuth extends _i2.EndpointRef {
         'auth',
         'loginWithToken',
         {'token': token},
+      );
+
+  /// Returns a list of emails from unread 'ask_admin' notifications.
+  /// Admin only.
+  _i3.Future<List<String>> getPendingRequests() =>
+      caller.callServerEndpoint<List<String>>(
+        'auth',
+        'getPendingRequests',
+        {},
+      );
+
+  /// Admin issues a one-time token for a user who requested access by email.
+  _i3.Future<String> issueAccessToken(String email) =>
+      caller.callServerEndpoint<String>(
+        'auth',
+        'issueAccessToken',
+        {'email': email},
       );
 }
 
