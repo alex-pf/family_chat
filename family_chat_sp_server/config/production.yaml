@@ -28,8 +28,8 @@ webServer:
 database:
   host: localhost
   port: 5432
-  name: family_chat
-  user: postgres
+  name: family_chat_db
+  user: family_chat_user
   requireSsl: false
   #maxConnectionCount: 10
 
