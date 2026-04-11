@@ -74,6 +74,20 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  /// Обновляет имя текущего пользователя локально (после updateProfile)
+  void updateCurrentUserName(String name) {
+    if (currentUser == null) return;
+    currentUser = AppUser(
+      id: currentUser!.id,
+      email: currentUser!.email,
+      name: name,
+      avatarUrl: currentUser!.avatarUrl,
+      isBlocked: currentUser!.isBlocked,
+      mustChangePassword: currentUser!.mustChangePassword,
+    );
+    notifyListeners();
+  }
+
   /// Сбрасывает состояние при выходе
   void clear() {
     currentUser = null;

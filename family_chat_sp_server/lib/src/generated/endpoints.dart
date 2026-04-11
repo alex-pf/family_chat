@@ -340,6 +340,42 @@ class Endpoints extends _i1.EndpointDispatch {
                 params['userId'],
               ),
         ),
+        'getUserRoles': _i1.MethodConnector(
+          name: 'getUserRoles',
+          params: {
+            'userId': _i1.ParameterDescription(
+              name: 'userId',
+              type: _i1.getType<int>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _i1.Session session,
+                Map<String, dynamic> params,
+              ) async => (endpoints['admin'] as _i4.AdminEndpoint).getUserRoles(
+                session,
+                params['userId'],
+              ),
+        ),
+        'deleteUser': _i1.MethodConnector(
+          name: 'deleteUser',
+          params: {
+            'userId': _i1.ParameterDescription(
+              name: 'userId',
+              type: _i1.getType<int>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _i1.Session session,
+                Map<String, dynamic> params,
+              ) async => (endpoints['admin'] as _i4.AdminEndpoint).deleteUser(
+                session,
+                params['userId'],
+              ),
+        ),
         'unblockUser': _i1.MethodConnector(
           name: 'unblockUser',
           params: {

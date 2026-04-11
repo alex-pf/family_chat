@@ -11,6 +11,7 @@ import '../widgets/user_avatar.dart';
 import 'login_screen.dart';
 import 'chat_screen.dart';
 import 'admin/admin_screen.dart';
+import 'my_profile_screen.dart';
 
 /// Простая модель данных чата для UI
 class ChatPreview {
@@ -241,7 +242,23 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: [
                           const Icon(Icons.person_outlined),
                           const SizedBox(width: 12),
-                          Text(user?.name ?? 'Профиль'),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(user?.name ?? 'Профиль'),
+                              if (user?.email != null)
+                                Text(
+                                  user!.email,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  ),
+                                ),
+                            ],
+                          ),
                         ],
                       ),
                     ),
@@ -270,6 +287,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                   onSelected: (value) {
                     if (value == 'logout') _signOut();
+                    if (value == 'profile') {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                            builder: (_) => const MyProfileScreen()),
+                      );
+                    }
                     if (value == 'admin') {
                       Navigator.of(context).push(
                         MaterialPageRoute(

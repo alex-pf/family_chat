@@ -1,24 +1,10 @@
+// ignore_for_file: deprecated_member_use
+
+import 'package:family_chat_sp_client/family_chat_sp_client.dart' as sp;
 import 'package:flutter/material.dart';
 
-import '../../app_state.dart';
+import '../../main.dart';
 import '../../widgets/user_avatar.dart';
-
-/// Модель пользователя для UI администратора
-class AdminUserModel {
-  final int id;
-  final String name;
-  final String email;
-  final List<UserRole> roles;
-  final bool isBlocked;
-
-  const AdminUserModel({
-    required this.id,
-    required this.name,
-    required this.email,
-    required this.roles,
-    this.isBlocked = false,
-  });
-}
 
 /// Экран управления пользователями (для Admin)
 class AdminUsersScreen extends StatefulWidget {
@@ -29,7 +15,7 @@ class AdminUsersScreen extends StatefulWidget {
 }
 
 class _AdminUsersScreenState extends State<AdminUsersScreen> {
-  List<AdminUserModel> _users = [];
+  List<sp.AppUser> _users = [];
   bool _isLoading = true;
   String _searchQuery = '';
 
@@ -42,54 +28,20 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   Future<void> _loadUsers() async {
     setState(() => _isLoading = true);
     try {
-      // TODO: после serverpod generate:
-      // final users = await client.admin.getUsers();
-      // setState(() { _users = users.map(...).toList(); });
-
-      // Заглушка
-      setState(() {
-        _users = [
-          AdminUserModel(
-            id: 1,
-            name: 'Администратор',
-            email: 'admin@family.local',
-            roles: [UserRole.admin],
-          ),
-          AdminUserModel(
-            id: 2,
-            name: 'Мама',
-            email: 'mama@family.local',
-            roles: [UserRole.master],
-          ),
-          AdminUserModel(
-            id: 3,
-            name: 'Папа',
-            email: 'papa@family.local',
-            roles: [UserRole.master],
-          ),
-          AdminUserModel(
-            id: 4,
-            name: 'Дочка',
-            email: 'dochka@family.local',
-            roles: [UserRole.family],
-          ),
-          AdminUserModel(
-            id: 5,
-            name: 'Сын',
-            email: 'son@family.local',
-            roles: [UserRole.family],
-            isBlocked: true,
-          ),
-        ];
-      });
+      final users = await client.user.listAllUsers();
+      if (mounted) setState(() => _users = users);
     } catch (e) {
-      debugPrint('Error loading users: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка загрузки: $e')),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  List<AdminUserModel> get _filteredUsers {
+  List<sp.AppUser> get _filteredUsers {
     if (_searchQuery.isEmpty) return _users;
     final q = _searchQuery.toLowerCase();
     return _users.where((u) {
@@ -98,190 +50,14 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     }).toList();
   }
 
-  Future<void> _showCreateUserDialog() async {
-    final nameController = TextEditingController();
-    final emailController = TextEditingController();
-    final passwordController = TextEditingController();
-    UserRole selectedRole = UserRole.family;
-
+  Future<void> _showManageUserDialog(sp.AppUser user) async {
     await showDialog<void>(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('Создать пользователя'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(labelText: 'Имя'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(labelText: 'Email'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: passwordController,
-                  obscureText: true,
-                  decoration:
-                      const InputDecoration(labelText: 'Начальный пароль'),
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<UserRole>(
-                  value: selectedRole,
-                  decoration: const InputDecoration(labelText: 'Роль'),
-                  items: UserRole.values.map((r) {
-                    return DropdownMenuItem(
-                      value: r,
-                      child: Text(_roleName(r)),
-                    );
-                  }).toList(),
-                  onChanged: (r) =>
-                      setDialogState(() => selectedRole = r!),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Отмена'),
-            ),
-            FilledButton(
-              style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
-              onPressed: () async {
-                // TODO: await client.admin.createUser(
-                //   name: nameController.text,
-                //   email: emailController.text,
-                //   password: passwordController.text,
-                //   role: selectedRole.name,
-                // );
-                Navigator.of(ctx).pop();
-                _loadUsers();
-              },
-              child: const Text('Создать'),
-            ),
-          ],
-        ),
+      builder: (_) => _ManageUserDialog(
+        user: user,
+        onReload: _loadUsers,
       ),
     );
-
-    nameController.dispose();
-    emailController.dispose();
-    passwordController.dispose();
-  }
-
-  Future<void> _showManageUserDialog(AdminUserModel user) async {
-    List<UserRole> selectedRoles = List.from(user.roles);
-    bool isBlocked = user.isBlocked;
-
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: Text('Управление: ${user.name}'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Роли:', style: TextStyle(fontWeight: FontWeight.w600)),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  children: UserRole.values.map((role) {
-                    final selected = selectedRoles.contains(role);
-                    return FilterChip(
-                      label: Text(_roleName(role)),
-                      selected: selected,
-                      onSelected: (v) {
-                        setDialogState(() {
-                          if (v) {
-                            selectedRoles.add(role);
-                          } else {
-                            selectedRoles.remove(role);
-                          }
-                        });
-                      },
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 16),
-                const Divider(),
-                SwitchListTile(
-                  title: const Text('Заблокирован'),
-                  subtitle: isBlocked
-                      ? const Text('Пользователь не может войти')
-                      : null,
-                  value: isBlocked,
-                  onChanged: (v) => setDialogState(() => isBlocked = v),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Отмена'),
-            ),
-            FilledButton(
-              style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
-              onPressed: () async {
-                // TODO: await client.admin.updateUser(
-                //   userId: user.id,
-                //   roles: selectedRoles.map((r) => r.name).toList(),
-                //   isBlocked: isBlocked,
-                // );
-                Navigator.of(ctx).pop();
-                _loadUsers();
-              },
-              child: const Text('Сохранить'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _roleName(UserRole role) {
-    switch (role) {
-      case UserRole.admin:    return 'Администратор';
-      case UserRole.master:   return 'Мастер';
-      case UserRole.family:   return 'Семья';
-      case UserRole.parents:  return 'Родители';
-      case UserRole.children: return 'Дети';
-      case UserRole.guests:   return 'Гости';
-      case UserRole.friends:  return 'Друзья';
-    }
-  }
-
-  Color _roleColor(UserRole role, ColorScheme cs) {
-    switch (role) {
-      case UserRole.admin:    return cs.errorContainer;
-      case UserRole.master:   return cs.primaryContainer;
-      case UserRole.family:   return cs.secondaryContainer;
-      case UserRole.parents:  return cs.tertiaryContainer;
-      case UserRole.children: return cs.surfaceContainerHighest;
-      case UserRole.guests:   return cs.surfaceContainerHigh;
-      case UserRole.friends:  return cs.surfaceContainer;
-    }
-  }
-
-  Color _roleTextColor(UserRole role, ColorScheme cs) {
-    switch (role) {
-      case UserRole.admin:    return cs.onErrorContainer;
-      case UserRole.master:   return cs.onPrimaryContainer;
-      case UserRole.family:   return cs.onSecondaryContainer;
-      case UserRole.parents:  return cs.onTertiaryContainer;
-      case UserRole.children: return cs.onSurface;
-      case UserRole.guests:   return cs.onSurface;
-      case UserRole.friends:  return cs.onSurface;
-    }
   }
 
   @override
@@ -316,76 +92,412 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
           ? const Center(child: CircularProgressIndicator())
           : _filteredUsers.isEmpty
               ? Center(
-                  child: Text(
-                    'Нет пользователей',
-                    style: TextStyle(color: colorScheme.onSurfaceVariant),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.people_outline,
+                        size: 64,
+                        color: colorScheme.outlineVariant,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        _searchQuery.isEmpty
+                            ? 'Нет пользователей'
+                            : 'Ничего не найдено',
+                        style:
+                            TextStyle(color: colorScheme.onSurfaceVariant),
+                      ),
+                    ],
                   ),
                 )
-              : ListView.builder(
-                  itemCount: _filteredUsers.length,
-                  itemBuilder: (_, i) {
-                    final user = _filteredUsers[i];
-                    return ListTile(
-                      leading: UserAvatar(
-                        name: user.name,
-                        userId: user.id,
-                        size: 44,
-                        isBlocked: user.isBlocked,
-                      ),
-                      title: Opacity(
-                        opacity: user.isBlocked ? 0.5 : 1.0,
-                        child: Text(
-                          user.name,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
+              : RefreshIndicator(
+                  onRefresh: _loadUsers,
+                  child: ListView.builder(
+                    itemCount: _filteredUsers.length,
+                    itemBuilder: (_, i) {
+                      final user = _filteredUsers[i];
+                      return ListTile(
+                        leading: UserAvatar(
+                          name: user.name,
+                          userId: user.id ?? 0,
+                          size: 44,
+                          isBlocked: user.isBlocked,
                         ),
-                      ),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            user.email,
-                            style: TextStyle(
-                              color: colorScheme.onSurfaceVariant,
-                              fontSize: 12,
-                            ),
+                        title: Opacity(
+                          opacity: user.isBlocked ? 0.5 : 1.0,
+                          child: Text(
+                            user.name,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w600),
                           ),
-                          const SizedBox(height: 4),
-                          Wrap(
-                            spacing: 4,
-                            children: user.roles.map((r) {
-                              return Container(
+                        ),
+                        subtitle: Text(
+                          user.email,
+                          style: TextStyle(
+                            color: colorScheme.onSurfaceVariant,
+                            fontSize: 12,
+                          ),
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (user.isBlocked)
+                              Container(
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 8, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: _roleColor(r, colorScheme),
-                                  borderRadius: BorderRadius.circular(10),
+                                  color: colorScheme.errorContainer,
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
-                                  _roleName(r),
+                                  'Заблокирован',
                                   style: TextStyle(
                                     fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: _roleTextColor(r, colorScheme),
+                                    color: colorScheme.onErrorContainer,
                                   ),
                                 ),
-                              );
-                            }).toList(),
-                          ),
-                        ],
-                      ),
-                      isThreeLine: true,
-                      trailing: Icon(
-                        Icons.chevron_right,
-                        color: colorScheme.outlineVariant,
-                      ),
-                      onTap: () => _showManageUserDialog(user),
-                    );
-                  },
+                              ),
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.chevron_right,
+                              color: colorScheme.outlineVariant,
+                            ),
+                          ],
+                        ),
+                        onTap: () => _showManageUserDialog(user),
+                      );
+                    },
+                  ),
                 ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showCreateUserDialog,
-        child: const Icon(Icons.person_add_outlined),
-      ),
     );
+  }
+}
+
+// ── Диалог управления пользователем ─────────────────────────────────────────
+
+class _ManageUserDialog extends StatefulWidget {
+  final sp.AppUser user;
+  final VoidCallback onReload;
+
+  const _ManageUserDialog({required this.user, required this.onReload});
+
+  @override
+  State<_ManageUserDialog> createState() => _ManageUserDialogState();
+}
+
+class _ManageUserDialogState extends State<_ManageUserDialog> {
+  List<sp.UserRole> _selectedRoles = [];
+  bool _loadingRoles = true;
+  bool _savingRoles = false;
+  bool _savingBlock = false;
+  bool _checkingDelete = false;
+  bool? _hasChats; // true = есть чаты, false = нет, null = не проверено
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRoles();
+  }
+
+  Future<void> _loadRoles() async {
+    try {
+      final roleNames = await client.admin.getUserRoles(widget.user.id!);
+      final List<sp.UserRole> roles = roleNames
+          .map<sp.UserRole?>((r) {
+            try {
+              return sp.UserRole.values.byName(r.toLowerCase());
+            } catch (_) {
+              return null;
+            }
+          })
+          .whereType<sp.UserRole>()
+          .toList();
+      if (mounted) setState(() => _selectedRoles = roles);
+    } catch (_) {
+      // Оставляем пустой список — не критично
+    } finally {
+      if (mounted) setState(() => _loadingRoles = false);
+    }
+  }
+
+  // ── Блокировка ─────────────────────────────────────────────────────────
+
+  Future<void> _toggleBlock(bool block) async {
+    setState(() => _savingBlock = true);
+    try {
+      if (block) {
+        await client.admin.blockUser(widget.user.id!);
+      } else {
+        await client.admin.unblockUser(widget.user.id!);
+      }
+      if (mounted) Navigator.of(context).pop();
+      widget.onReload();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка: $e')),
+        );
+        setState(() => _savingBlock = false);
+      }
+    }
+  }
+
+  // ── Роли ───────────────────────────────────────────────────────────────
+
+  Future<void> _saveRoles() async {
+    if (_selectedRoles.isEmpty) return;
+    setState(() => _savingRoles = true);
+    try {
+      await client.admin.assignRoles(widget.user.id!, _selectedRoles);
+      if (mounted) Navigator.of(context).pop();
+      widget.onReload();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка сохранения ролей: $e')),
+        );
+        setState(() => _savingRoles = false);
+      }
+    }
+  }
+
+  // ── Удаление ───────────────────────────────────────────────────────────
+
+  Future<void> _checkAndDelete() async {
+    setState(() => _checkingDelete = true);
+    try {
+      // Пробуем удалить — сервер проверит наличие чатов и вернёт ошибку
+      // если они есть. Это единственная проверка, т.к. нет отдельного
+      // admin.hasUserChats() endpoint.
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Удалить пользователя?'),
+          content: Text(
+            'Аккаунт «${widget.user.name}» (${widget.user.email}) '
+            'будет удалён безвозвратно.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Отмена'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.error,
+                foregroundColor: Theme.of(context).colorScheme.onError,
+                minimumSize: const Size(0, 44),
+              ),
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Удалить'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed != true || !mounted) {
+        setState(() => _checkingDelete = false);
+        return;
+      }
+
+      await client.admin.deleteUser(widget.user.id!);
+      if (mounted) Navigator.of(context).pop();
+      widget.onReload();
+    } catch (e) {
+      final errStr = e.toString();
+      // Если сервер сообщил о чатах — блокируем кнопку и показываем тултип
+      if (errStr.contains('chat')) {
+        setState(() => _hasChats = true);
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _hasChats == true
+                  ? 'Нельзя удалить: пользователь участвует в чатах'
+                  : 'Ошибка удаления: $errStr',
+            ),
+          ),
+        );
+        setState(() => _checkingDelete = false);
+      }
+    }
+  }
+
+  // ── Build ──────────────────────────────────────────────────────────────
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final user = widget.user;
+    final deleteBlocked = _hasChats == true;
+
+    return AlertDialog(
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(user.name),
+          Text(
+            user.email,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w400,
+              color: cs.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Блокировка ──────────────────────────────────────────
+            const Divider(),
+            SwitchListTile(
+              title:
+                  Text(user.isBlocked ? 'Разблокировать' : 'Заблокировать'),
+              subtitle: user.isBlocked
+                  ? const Text('Пользователь не может войти')
+                  : null,
+              value: user.isBlocked,
+              onChanged: _savingBlock ? null : _toggleBlock,
+              secondary: _savingBlock
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Icon(
+                      user.isBlocked
+                          ? Icons.lock_outlined
+                          : Icons.lock_open_outlined,
+                      color: cs.onSurfaceVariant,
+                    ),
+              contentPadding: EdgeInsets.zero,
+            ),
+
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 8),
+
+            // ── Роли ─────────────────────────────────────────────────
+            const Text(
+              'Роли:',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            _loadingRoles
+                ? const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                : Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: sp.UserRole.values.map((role) {
+                      final selected = _selectedRoles.contains(role);
+                      return FilterChip(
+                        label: Text(_roleName(role)),
+                        selected: selected,
+                        onSelected: (v) {
+                          setState(() {
+                            if (v) {
+                              _selectedRoles.add(role);
+                            } else {
+                              _selectedRoles.remove(role);
+                            }
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 8),
+
+            // ── Удаление ─────────────────────────────────────────────
+            Tooltip(
+              message: deleteBlocked
+                  ? 'Нельзя удалить: есть чаты с участием этого пользователя'
+                  : '',
+              child: SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: (deleteBlocked || _checkingDelete)
+                      ? null
+                      : _checkAndDelete,
+                  icon: _checkingDelete
+                      ? SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: cs.error),
+                        )
+                      : Icon(
+                          Icons.delete_outline,
+                          color: deleteBlocked ? null : cs.error,
+                        ),
+                  label: Text(
+                    'Удалить пользователя',
+                    style:
+                        TextStyle(color: deleteBlocked ? null : cs.error),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 44),
+                    side: BorderSide(
+                        color: deleteBlocked
+                            ? cs.outlineVariant
+                            : cs.error),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Отмена'),
+        ),
+        FilledButton(
+          style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
+          onPressed:
+              (_savingRoles || _selectedRoles.isEmpty) ? null : _saveRoles,
+          child: _savingRoles
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Сохранить роли'),
+        ),
+      ],
+    );
+  }
+
+  String _roleName(sp.UserRole role) {
+    switch (role) {
+      case sp.UserRole.admin:
+        return 'Администратор';
+      case sp.UserRole.master:
+        return 'Мастер';
+      case sp.UserRole.family:
+        return 'Семья';
+      case sp.UserRole.parents:
+        return 'Родители';
+      case sp.UserRole.children:
+        return 'Дети';
+      case sp.UserRole.guests:
+        return 'Гости';
+      case sp.UserRole.friends:
+        return 'Друзья';
+    }
   }
 }

@@ -1099,6 +1099,9 @@ class Protocol extends _i1.SerializationManagerServer {
       return (data as List).map((e) => deserialize<_i22.UserRole>(e)).toList()
           as T;
     }
+    if (t == List<String>) {
+      return (data as List).map((e) => deserialize<String>(e)).toList() as T;
+    }
     if (t == List<_i23.ChatAdminInfo>) {
       return (data as List)
               .map((e) => deserialize<_i23.ChatAdminInfo>(e))
@@ -1119,9 +1122,6 @@ class Protocol extends _i1.SerializationManagerServer {
               .map((e) => deserialize<_i25.ChatMessage>(e))
               .toList()
           as T;
-    }
-    if (t == List<String>) {
-      return (data as List).map((e) => deserialize<String>(e)).toList() as T;
     }
     if (t == List<_i26.AppUser>) {
       return (data as List).map((e) => deserialize<_i26.AppUser>(e)).toList()

@@ -290,6 +290,22 @@ class EndpointAdmin extends _i2.EndpointRef {
     {'userId': userId},
   );
 
+  /// Returns the list of role names for a given user.
+  _i3.Future<List<String>> getUserRoles(int userId) =>
+      caller.callServerEndpoint<List<String>>(
+        'admin',
+        'getUserRoles',
+        {'userId': userId},
+      );
+
+  /// Permanently deletes a user account.
+  /// Throws if the user is a member of any chat.
+  _i3.Future<void> deleteUser(int userId) => caller.callServerEndpoint<void>(
+    'admin',
+    'deleteUser',
+    {'userId': userId},
+  );
+
   /// Unblocks a previously blocked user.
   _i3.Future<void> unblockUser(int userId) => caller.callServerEndpoint<void>(
     'admin',

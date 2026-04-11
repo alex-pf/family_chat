@@ -12,6 +12,8 @@ jwtRefresh:
 admin:
   - createUser:
   - blockUser:
+  - getUserRoles:
+  - deleteUser:
   - unblockUser:
   - assignRoles:
   - listAllChats:

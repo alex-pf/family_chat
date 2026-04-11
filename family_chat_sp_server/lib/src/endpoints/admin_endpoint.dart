@@ -84,6 +84,47 @@ class AdminEndpoint extends Endpoint {
     await AppUser.db.updateRow(session, user);
   }
 
+  /// Returns the list of role names for a given user.
+  Future<List<String>> getUserRoles(Session session, int userId) async {
+    await requireAdmin(session);
+
+    final assignments = await UserRoleAssignment.db.find(
+      session,
+      where: (t) => t.userId.equals(userId),
+    );
+    return assignments.map((a) => a.role.name).toList();
+  }
+
+  /// Permanently deletes a user account.
+  /// Throws if the user is a member of any chat.
+  Future<void> deleteUser(Session session, int userId) async {
+    await requireAdmin(session);
+
+    final user = await AppUser.db.findById(session, userId);
+    if (user == null) throw Exception('User not found: $userId');
+
+    // Check for chat membership.
+    final memberships = await ChatMember.db.count(
+      session,
+      where: (t) => t.userId.equals(userId),
+    );
+    if (memberships > 0) {
+      throw Exception(
+        'Cannot delete user: they are a member of $memberships chat(s). '
+        'Remove them from all chats first.',
+      );
+    }
+
+    // Remove role assignments.
+    await UserRoleAssignment.db.deleteWhere(
+      session,
+      where: (t) => t.userId.equals(userId),
+    );
+
+    // Delete the AppUser record.
+    await AppUser.db.deleteRow(session, user);
+  }
+
   /// Unblocks a previously blocked user.
   Future<void> unblockUser(Session session, int userId) async {
     await requireAdmin(session);
