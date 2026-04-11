@@ -533,6 +533,45 @@ class _AdminEndpoint {
 
   final _i2.SerializationManager _serializationManager;
 
+  _i3.Future<_i5.AppUser> adminCreateUser(
+    _i1.TestSessionBuilder sessionBuilder,
+    String name,
+    String email,
+    String oneTimePassword,
+    List<_i6.UserRole> roles,
+  ) async {
+    return _i1.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _i1.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'admin',
+            method: 'adminCreateUser',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'admin',
+          methodName: 'adminCreateUser',
+          parameters: _i1.testObjectToJson({
+            'name': name,
+            'email': email,
+            'oneTimePassword': oneTimePassword,
+            'roles': roles,
+          }),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _i3.Future<_i5.AppUser>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
   _i3.Future<_i5.AppUser> createUser(
     _i1.TestSessionBuilder sessionBuilder,
     String name,

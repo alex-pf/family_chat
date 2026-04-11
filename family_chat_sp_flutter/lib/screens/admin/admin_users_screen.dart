@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../../main.dart';
 import '../../widgets/user_avatar.dart';
+import 'create_user_dialog.dart';
 
 /// Экран управления пользователями (для Admin)
 class AdminUsersScreen extends StatefulWidget {
@@ -50,6 +51,26 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     }).toList();
   }
 
+  Future<void> _openCreateUserDialog() async {
+    final created = await showDialog<sp.AppUser>(
+      context: context,
+      builder: (_) => const CreateUserDialog(),
+    );
+    if (created != null) {
+      // Перезагружаем список и показываем снэкбар суспехом
+      _loadUsers();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Пользователь «${created.name}» создан'),
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _showManageUserDialog(sp.AppUser user) async {
     await showDialog<void>(
       context: context,
@@ -67,6 +88,21 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Пользователи'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: FilledButton.icon(
+              onPressed: _openCreateUserDialog,
+              icon: const Icon(Icons.person_add_outlined, size: 18),
+              label: const Text('Добавить'),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(0, 36),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 0),
+              ),
+            ),
+          ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(64),
           child: Padding(

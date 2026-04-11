@@ -1,4 +1,6 @@
 import 'package:serverpod/serverpod.dart';
+import 'package:serverpod_auth_idp_server/core.dart';
+import 'package:serverpod_auth_idp_server/providers/email.dart';
 
 import '../generated/protocol.dart';
 import '../util/role_checker.dart';
@@ -12,11 +14,108 @@ class AdminEndpoint extends Endpoint {
   // User management
   // ──────────────────────────────────────────────────────────────────────────
 
+  // ── Helper: derive initials and avatar colour from name + email ──────────
+
+  String _initials(String name) {
+    final parts = name.trim().split(RegExp(r'[\s._-]+'));
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    return name.isNotEmpty ? name[0].toUpperCase() : 'U';
+  }
+
+  String _colorFromSeed(String seed) {
+    const colors = [
+      '#FF5733',
+      '#33B5FF',
+      '#8033FF',
+      '#FF33A8',
+      '#33FF57',
+      '#FF8C33',
+      '#33FFF5',
+      '#FF3355',
+    ];
+    final idx = seed.codeUnits.fold(0, (a, b) => a + b) % colors.length;
+    return colors[idx];
+  }
+
+  /// Admin creates a new user: one call that registers the Serverpod auth
+  /// account (email + one-time password) AND creates the AppUser + assigns
+  /// roles. mustChangePassword is set to true automatically.
+  Future<AppUser> adminCreateUser(
+    Session session,
+    String name,
+    String email,
+    String oneTimePassword,
+    List<UserRole> roles,
+  ) async {
+    await requireAdmin(session);
+
+    // Check uniqueness.
+    final existing = await AppUser.db.findFirstRow(
+      session,
+      where: (t) => t.email.equals(email),
+    );
+    if (existing != null) {
+      throw Exception('Email already registered: $email');
+    }
+
+    // 1. Create Serverpod AuthUser.
+    final authUsers = AuthUsers();
+    final authUserModel = await authUsers.create(session);
+    final authUserId = authUserModel.id;
+
+    // 2. Register email + password in Serverpod Email IDP.
+    final emailIdp = AuthServices.getIdentityProvider<EmailIdp>();
+    await session.db.transaction((tx) async {
+      await emailIdp.admin.createEmailAuthentication(
+        session,
+        authUserId: authUserId,
+        email: email,
+        password: oneTimePassword,
+        transaction: tx,
+      );
+    });
+
+    // 3. Derive avatar properties.
+    final initials = _initials(name);
+    final color = _colorFromSeed(email);
+
+    final callerUser = await getAuthenticatedAppUser(session);
+
+    // 4. Create AppUser record.
+    final appUser = AppUser(
+      serverpodUserId: authUserId.toString(),
+      email: email,
+      name: name.trim(),
+      avatarColor: color,
+      avatarInitials: initials,
+      isBlocked: false,
+      mustChangePassword: true,
+      createdAt: DateTime.now().toUtc(),
+    );
+    final saved = await AppUser.db.insertRow(session, appUser);
+
+    // 5. Assign roles.
+    final now = DateTime.now().toUtc();
+    for (final role in roles) {
+      await UserRoleAssignment.db.insertRow(
+        session,
+        UserRoleAssignment(
+          userId: saved.id!,
+          role: role,
+          assignedAt: now,
+          assignedByUserId: callerUser.id!,
+        ),
+      );
+    }
+
+    return saved;
+  }
+
   /// Creates a new AppUser record and assigns roles.
   ///
-  /// The Serverpod auth account (email + password) must have been created
-  /// externally (e.g. via EmailIdpEndpoint). Pass the resulting
-  /// [serverpodUserId] UUID string here.
+  /// @deprecated Use [adminCreateUser] instead.
   Future<AppUser> createUser(
     Session session,
     String name,
@@ -395,22 +494,4 @@ class AdminEndpoint extends Endpoint {
     }
   }
 
-  // ──────────────────────────────────────────────────────────────────────────
-  // Helpers
-  // ──────────────────────────────────────────────────────────────────────────
-
-  String _colorFromSeed(String seed) {
-    const colors = [
-      '#FF5733',
-      '#33B5FF',
-      '#8033FF',
-      '#FF33A8',
-      '#33FF57',
-      '#FF8C33',
-      '#33FFF5',
-      '#FF3355',
-    ];
-    final idx = seed.codeUnits.fold(0, (a, b) => a + b) % colors.length;
-    return colors[idx];
-  }
 }

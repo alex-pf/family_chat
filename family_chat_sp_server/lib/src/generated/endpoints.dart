@@ -286,6 +286,43 @@ class Endpoints extends _i1.EndpointDispatch {
       name: 'admin',
       endpoint: endpoints['admin']!,
       methodConnectors: {
+        'adminCreateUser': _i1.MethodConnector(
+          name: 'adminCreateUser',
+          params: {
+            'name': _i1.ParameterDescription(
+              name: 'name',
+              type: _i1.getType<String>(),
+              nullable: false,
+            ),
+            'email': _i1.ParameterDescription(
+              name: 'email',
+              type: _i1.getType<String>(),
+              nullable: false,
+            ),
+            'oneTimePassword': _i1.ParameterDescription(
+              name: 'oneTimePassword',
+              type: _i1.getType<String>(),
+              nullable: false,
+            ),
+            'roles': _i1.ParameterDescription(
+              name: 'roles',
+              type: _i1.getType<List<_i10.UserRole>>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _i1.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['admin'] as _i4.AdminEndpoint).adminCreateUser(
+                    session,
+                    params['name'],
+                    params['email'],
+                    params['oneTimePassword'],
+                    params['roles'],
+                  ),
+        ),
         'createUser': _i1.MethodConnector(
           name: 'createUser',
           params: {

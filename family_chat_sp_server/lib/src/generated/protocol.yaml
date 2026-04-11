@@ -10,6 +10,7 @@ emailIdp:
 jwtRefresh:
   - refreshAccessToken:
 admin:
+  - adminCreateUser:
   - createUser:
   - blockUser:
   - getUserRoles:

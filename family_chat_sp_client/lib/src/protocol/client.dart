@@ -262,11 +262,28 @@ class EndpointAdmin extends _i2.EndpointRef {
   @override
   String get name => 'admin';
 
+  /// Admin creates a new user: one call that registers the Serverpod auth
+  /// account (email + one-time password) AND creates the AppUser + assigns
+  /// roles. mustChangePassword is set to true automatically.
+  _i3.Future<_i5.AppUser> adminCreateUser(
+    String name,
+    String email,
+    String oneTimePassword,
+    List<_i6.UserRole> roles,
+  ) => caller.callServerEndpoint<_i5.AppUser>(
+    'admin',
+    'adminCreateUser',
+    {
+      'name': name,
+      'email': email,
+      'oneTimePassword': oneTimePassword,
+      'roles': roles,
+    },
+  );
+
   /// Creates a new AppUser record and assigns roles.
   ///
-  /// The Serverpod auth account (email + password) must have been created
-  /// externally (e.g. via EmailIdpEndpoint). Pass the resulting
-  /// [serverpodUserId] UUID string here.
+  /// @deprecated Use [adminCreateUser] instead.
   _i3.Future<_i5.AppUser> createUser(
     String name,
     String email,
