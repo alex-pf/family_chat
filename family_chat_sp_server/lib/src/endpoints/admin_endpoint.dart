@@ -51,7 +51,10 @@ class AdminEndpoint extends Endpoint {
   ) async {
     await requireAdmin(session);
 
-    // Check uniqueness.
+    // Resolve caller first (cheap DB lookup, before any writes).
+    final callerUser = await getAuthenticatedAppUser(session);
+
+    // Check email uniqueness.
     final existing = await AppUser.db.findFirstRow(
       session,
       where: (t) => t.email.equals(email),
@@ -60,30 +63,27 @@ class AdminEndpoint extends Endpoint {
       throw Exception('Email already registered: $email');
     }
 
-    // 1. Create Serverpod AuthUser.
+    // Derive avatar properties before any writes.
+    final initials = _initials(name);
+    final color = _colorFromSeed(email);
+
+    // 1. Create Serverpod AuthUser (manages its own transaction internally).
     final authUsers = AuthUsers();
     final authUserModel = await authUsers.create(session);
     final authUserId = authUserModel.id;
 
-    // 2. Register email + password in Serverpod Email IDP.
+    // 2. Register email + password.
+    //    Pass transaction: null so the library creates its own transaction
+    //    (no nesting, no savepoint complexity).
     final emailIdp = AuthServices.getIdentityProvider<EmailIdp>();
-    await session.db.transaction((tx) async {
-      await emailIdp.admin.createEmailAuthentication(
-        session,
-        authUserId: authUserId,
-        email: email,
-        password: oneTimePassword,
-        transaction: tx,
-      );
-    });
+    await emailIdp.admin.createEmailAuthentication(
+      session,
+      authUserId: authUserId,
+      email: email,
+      password: oneTimePassword,
+    );
 
-    // 3. Derive avatar properties.
-    final initials = _initials(name);
-    final color = _colorFromSeed(email);
-
-    final callerUser = await getAuthenticatedAppUser(session);
-
-    // 4. Create AppUser record.
+    // 3. Create AppUser record.
     final appUser = AppUser(
       serverpodUserId: authUserId.toString(),
       email: email,
@@ -96,7 +96,7 @@ class AdminEndpoint extends Endpoint {
     );
     final saved = await AppUser.db.insertRow(session, appUser);
 
-    // 5. Assign roles.
+    // 4. Assign roles.
     final now = DateTime.now().toUtc();
     for (final role in roles) {
       await UserRoleAssignment.db.insertRow(
