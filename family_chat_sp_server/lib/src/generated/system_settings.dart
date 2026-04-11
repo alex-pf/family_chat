@@ -124,7 +124,12 @@ class _SystemSettingsImpl extends SystemSettings {
     required String key,
     required String value,
     required DateTime updatedAt,
-  }) : super._(id: id, key: key, value: value, updatedAt: updatedAt);
+  }) : super._(
+         id: id,
+         key: key,
+         value: value,
+         updatedAt: updatedAt,
+       );
 
   /// Returns a shallow copy of this [SystemSettings]
   /// with some or all fields replaced by the given arguments.
@@ -148,23 +153,39 @@ class _SystemSettingsImpl extends SystemSettings {
 class SystemSettingsUpdateTable extends _i1.UpdateTable<SystemSettingsTable> {
   SystemSettingsUpdateTable(super.table);
 
-  _i1.ColumnValue<String, String> key(String value) =>
-      _i1.ColumnValue(table.key, value);
+  _i1.ColumnValue<String, String> key(String value) => _i1.ColumnValue(
+    table.key,
+    value,
+  );
 
-  _i1.ColumnValue<String, String> value(String value) =>
-      _i1.ColumnValue(table.value, value);
+  _i1.ColumnValue<String, String> value(String value) => _i1.ColumnValue(
+    table.value,
+    value,
+  );
 
   _i1.ColumnValue<DateTime, DateTime> updatedAt(DateTime value) =>
-      _i1.ColumnValue(table.updatedAt, value);
+      _i1.ColumnValue(
+        table.updatedAt,
+        value,
+      );
 }
 
 class SystemSettingsTable extends _i1.Table<int?> {
   SystemSettingsTable({super.tableRelation})
     : super(tableName: 'system_settings') {
     updateTable = SystemSettingsUpdateTable(this);
-    key = _i1.ColumnString('key', this);
-    value = _i1.ColumnString('value', this);
-    updatedAt = _i1.ColumnDateTime('updatedAt', this);
+    key = _i1.ColumnString(
+      'key',
+      this,
+    );
+    value = _i1.ColumnString(
+      'value',
+      this,
+    );
+    updatedAt = _i1.ColumnDateTime(
+      'updatedAt',
+      this,
+    );
   }
 
   late final SystemSettingsUpdateTable updateTable;
@@ -176,7 +197,12 @@ class SystemSettingsTable extends _i1.Table<int?> {
   late final _i1.ColumnDateTime updatedAt;
 
   @override
-  List<_i1.Column> get columns => [id, key, value, updatedAt];
+  List<_i1.Column> get columns => [
+    id,
+    key,
+    value,
+    updatedAt,
+  ];
 }
 
 class SystemSettingsInclude extends _i1.IncludeObject {
@@ -346,7 +372,10 @@ class SystemSettingsRepository {
     SystemSettings row, {
     _i1.Transaction? transaction,
   }) async {
-    return session.db.insertRow<SystemSettings>(row, transaction: transaction);
+    return session.db.insertRow<SystemSettings>(
+      row,
+      transaction: transaction,
+    );
   }
 
   /// Updates all [SystemSettings]s in the list and returns the updated rows. If
@@ -431,7 +460,10 @@ class SystemSettingsRepository {
     List<SystemSettings> rows, {
     _i1.Transaction? transaction,
   }) async {
-    return session.db.delete<SystemSettings>(rows, transaction: transaction);
+    return session.db.delete<SystemSettings>(
+      rows,
+      transaction: transaction,
+    );
   }
 
   /// Deletes a single [SystemSettings].
@@ -440,7 +472,10 @@ class SystemSettingsRepository {
     SystemSettings row, {
     _i1.Transaction? transaction,
   }) async {
-    return session.db.deleteRow<SystemSettings>(row, transaction: transaction);
+    return session.db.deleteRow<SystemSettings>(
+      row,
+      transaction: transaction,
+    );
   }
 
   /// Deletes all rows matching the [where] expression.

@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 
+import 'main.dart';
+
 /// Роль пользователя в системе
-enum UserRole { admin, master, family }
+enum UserRole { admin, master, family, parents, children, guests, friends }
 
 /// Простая модель профиля текущего пользователя
 class AppUser {
@@ -46,24 +48,30 @@ class AppState extends ChangeNotifier {
   ///   currentUser = AppUser(id: profile.id, email: profile.email, name: profile.name, ...);
   ///   myRoles = profile.roles.map((r) => UserRole.values.byName(r.name.toLowerCase())).toList();
   Future<void> loadCurrentUser() async {
-    // TODO: реальный вызов API
-    // Пример:
-    // try {
-    //   final profile = await client.user.getProfile();
-    //   currentUser = AppUser(
-    //     id: profile.id!,
-    //     email: profile.email,
-    //     name: profile.name,
-    //     avatarUrl: profile.avatarUrl,
-    //     isBlocked: profile.isBlocked,
-    //     mustChangePassword: profile.mustChangePassword,
-    //   );
-    //   myRoles = ...;
-    //   notifyListeners();
-    // } catch (e) {
-    //   rethrow;
-    // }
-    notifyListeners();
+    try {
+      final profile = await client.user.getMyProfile();
+      final roleNames = await client.user.getMyRoles();
+      currentUser = AppUser(
+        id: profile.id!,
+        email: profile.email,
+        name: profile.name,
+        isBlocked: profile.isBlocked,
+        mustChangePassword: profile.mustChangePassword,
+      );
+      myRoles = roleNames
+          .map((r) {
+            try {
+              return UserRole.values.byName(r.toLowerCase());
+            } catch (_) {
+              return null;
+            }
+          })
+          .whereType<UserRole>()
+          .toList();
+      notifyListeners();
+    } catch (e) {
+      rethrow;
+    }
   }
 
   /// Сбрасывает состояние при выходе

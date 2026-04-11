@@ -250,34 +250,37 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
 
   String _roleName(UserRole role) {
     switch (role) {
-      case UserRole.admin:
-        return 'Администратор';
-      case UserRole.master:
-        return 'Мастер';
-      case UserRole.family:
-        return 'Семья';
+      case UserRole.admin:    return 'Администратор';
+      case UserRole.master:   return 'Мастер';
+      case UserRole.family:   return 'Семья';
+      case UserRole.parents:  return 'Родители';
+      case UserRole.children: return 'Дети';
+      case UserRole.guests:   return 'Гости';
+      case UserRole.friends:  return 'Друзья';
     }
   }
 
   Color _roleColor(UserRole role, ColorScheme cs) {
     switch (role) {
-      case UserRole.admin:
-        return cs.errorContainer;
-      case UserRole.master:
-        return cs.primaryContainer;
-      case UserRole.family:
-        return cs.secondaryContainer;
+      case UserRole.admin:    return cs.errorContainer;
+      case UserRole.master:   return cs.primaryContainer;
+      case UserRole.family:   return cs.secondaryContainer;
+      case UserRole.parents:  return cs.tertiaryContainer;
+      case UserRole.children: return cs.surfaceContainerHighest;
+      case UserRole.guests:   return cs.surfaceContainerHigh;
+      case UserRole.friends:  return cs.surfaceContainer;
     }
   }
 
   Color _roleTextColor(UserRole role, ColorScheme cs) {
     switch (role) {
-      case UserRole.admin:
-        return cs.onErrorContainer;
-      case UserRole.master:
-        return cs.onPrimaryContainer;
-      case UserRole.family:
-        return cs.onSecondaryContainer;
+      case UserRole.admin:    return cs.onErrorContainer;
+      case UserRole.master:   return cs.onPrimaryContainer;
+      case UserRole.family:   return cs.onSecondaryContainer;
+      case UserRole.parents:  return cs.onTertiaryContainer;
+      case UserRole.children: return cs.onSurface;
+      case UserRole.guests:   return cs.onSurface;
+      case UserRole.friends:  return cs.onSurface;
     }
   }
 

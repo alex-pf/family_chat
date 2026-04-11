@@ -167,26 +167,47 @@ class _ChatMemberImpl extends ChatMember {
 class ChatMemberUpdateTable extends _i1.UpdateTable<ChatMemberTable> {
   ChatMemberUpdateTable(super.table);
 
-  _i1.ColumnValue<int, int> chatId(int value) =>
-      _i1.ColumnValue(table.chatId, value);
+  _i1.ColumnValue<int, int> chatId(int value) => _i1.ColumnValue(
+    table.chatId,
+    value,
+  );
 
-  _i1.ColumnValue<int, int> userId(int value) =>
-      _i1.ColumnValue(table.userId, value);
+  _i1.ColumnValue<int, int> userId(int value) => _i1.ColumnValue(
+    table.userId,
+    value,
+  );
 
   _i1.ColumnValue<DateTime, DateTime> joinedAt(DateTime value) =>
-      _i1.ColumnValue(table.joinedAt, value);
+      _i1.ColumnValue(
+        table.joinedAt,
+        value,
+      );
 
-  _i1.ColumnValue<int, int> lastReadMessageId(int? value) =>
-      _i1.ColumnValue(table.lastReadMessageId, value);
+  _i1.ColumnValue<int, int> lastReadMessageId(int? value) => _i1.ColumnValue(
+    table.lastReadMessageId,
+    value,
+  );
 }
 
 class ChatMemberTable extends _i1.Table<int?> {
   ChatMemberTable({super.tableRelation}) : super(tableName: 'chat_members') {
     updateTable = ChatMemberUpdateTable(this);
-    chatId = _i1.ColumnInt('chatId', this);
-    userId = _i1.ColumnInt('userId', this);
-    joinedAt = _i1.ColumnDateTime('joinedAt', this);
-    lastReadMessageId = _i1.ColumnInt('lastReadMessageId', this);
+    chatId = _i1.ColumnInt(
+      'chatId',
+      this,
+    );
+    userId = _i1.ColumnInt(
+      'userId',
+      this,
+    );
+    joinedAt = _i1.ColumnDateTime(
+      'joinedAt',
+      this,
+    );
+    lastReadMessageId = _i1.ColumnInt(
+      'lastReadMessageId',
+      this,
+    );
   }
 
   late final ChatMemberUpdateTable updateTable;
@@ -376,7 +397,10 @@ class ChatMemberRepository {
     ChatMember row, {
     _i1.Transaction? transaction,
   }) async {
-    return session.db.insertRow<ChatMember>(row, transaction: transaction);
+    return session.db.insertRow<ChatMember>(
+      row,
+      transaction: transaction,
+    );
   }
 
   /// Updates all [ChatMember]s in the list and returns the updated rows. If
@@ -461,7 +485,10 @@ class ChatMemberRepository {
     List<ChatMember> rows, {
     _i1.Transaction? transaction,
   }) async {
-    return session.db.delete<ChatMember>(rows, transaction: transaction);
+    return session.db.delete<ChatMember>(
+      rows,
+      transaction: transaction,
+    );
   }
 
   /// Deletes a single [ChatMember].
@@ -470,7 +497,10 @@ class ChatMemberRepository {
     ChatMember row, {
     _i1.Transaction? transaction,
   }) async {
-    return session.db.deleteRow<ChatMember>(row, transaction: transaction);
+    return session.db.deleteRow<ChatMember>(
+      row,
+      transaction: transaction,
+    );
   }
 
   /// Deletes all rows matching the [where] expression.

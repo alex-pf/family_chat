@@ -688,6 +688,14 @@ class EndpointUser extends _i2.EndpointRef {
         {},
       );
 
+  /// Returns the list of role names for the authenticated caller.
+  _i3.Future<List<String>> getMyRoles() =>
+      caller.callServerEndpoint<List<String>>(
+        'user',
+        'getMyRoles',
+        {},
+      );
+
   /// Updates the display name of the authenticated caller.
   /// Recalculates initials after the name change.
   _i3.Future<_i5.AppUser> updateProfile(String name) =>

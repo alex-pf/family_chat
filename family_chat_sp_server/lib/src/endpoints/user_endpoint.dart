@@ -17,6 +17,16 @@ class UserEndpoint extends Endpoint {
     return getAuthenticatedAppUser(session);
   }
 
+  /// Returns the list of role names for the authenticated caller.
+  Future<List<String>> getMyRoles(Session session) async {
+    final appUser = await getAuthenticatedAppUser(session);
+    final assignments = await UserRoleAssignment.db.find(
+      session,
+      where: (t) => t.userId.equals(appUser.id!),
+    );
+    return assignments.map((a) => a.role.name).toList();
+  }
+
   /// Updates the display name of the authenticated caller.
   /// Recalculates initials after the name change.
   Future<AppUser> updateProfile(Session session, String name) async {

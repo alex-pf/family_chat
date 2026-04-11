@@ -165,27 +165,48 @@ class _MessageReactionImpl extends MessageReaction {
 class MessageReactionUpdateTable extends _i1.UpdateTable<MessageReactionTable> {
   MessageReactionUpdateTable(super.table);
 
-  _i1.ColumnValue<int, int> messageId(int value) =>
-      _i1.ColumnValue(table.messageId, value);
+  _i1.ColumnValue<int, int> messageId(int value) => _i1.ColumnValue(
+    table.messageId,
+    value,
+  );
 
-  _i1.ColumnValue<int, int> userId(int value) =>
-      _i1.ColumnValue(table.userId, value);
+  _i1.ColumnValue<int, int> userId(int value) => _i1.ColumnValue(
+    table.userId,
+    value,
+  );
 
-  _i1.ColumnValue<String, String> emoji(String value) =>
-      _i1.ColumnValue(table.emoji, value);
+  _i1.ColumnValue<String, String> emoji(String value) => _i1.ColumnValue(
+    table.emoji,
+    value,
+  );
 
   _i1.ColumnValue<DateTime, DateTime> createdAt(DateTime value) =>
-      _i1.ColumnValue(table.createdAt, value);
+      _i1.ColumnValue(
+        table.createdAt,
+        value,
+      );
 }
 
 class MessageReactionTable extends _i1.Table<int?> {
   MessageReactionTable({super.tableRelation})
     : super(tableName: 'message_reactions') {
     updateTable = MessageReactionUpdateTable(this);
-    messageId = _i1.ColumnInt('messageId', this);
-    userId = _i1.ColumnInt('userId', this);
-    emoji = _i1.ColumnString('emoji', this);
-    createdAt = _i1.ColumnDateTime('createdAt', this);
+    messageId = _i1.ColumnInt(
+      'messageId',
+      this,
+    );
+    userId = _i1.ColumnInt(
+      'userId',
+      this,
+    );
+    emoji = _i1.ColumnString(
+      'emoji',
+      this,
+    );
+    createdAt = _i1.ColumnDateTime(
+      'createdAt',
+      this,
+    );
   }
 
   late final MessageReactionUpdateTable updateTable;
@@ -199,7 +220,13 @@ class MessageReactionTable extends _i1.Table<int?> {
   late final _i1.ColumnDateTime createdAt;
 
   @override
-  List<_i1.Column> get columns => [id, messageId, userId, emoji, createdAt];
+  List<_i1.Column> get columns => [
+    id,
+    messageId,
+    userId,
+    emoji,
+    createdAt,
+  ];
 }
 
 class MessageReactionInclude extends _i1.IncludeObject {
@@ -369,7 +396,10 @@ class MessageReactionRepository {
     MessageReaction row, {
     _i1.Transaction? transaction,
   }) async {
-    return session.db.insertRow<MessageReaction>(row, transaction: transaction);
+    return session.db.insertRow<MessageReaction>(
+      row,
+      transaction: transaction,
+    );
   }
 
   /// Updates all [MessageReaction]s in the list and returns the updated rows. If
@@ -456,7 +486,10 @@ class MessageReactionRepository {
     List<MessageReaction> rows, {
     _i1.Transaction? transaction,
   }) async {
-    return session.db.delete<MessageReaction>(rows, transaction: transaction);
+    return session.db.delete<MessageReaction>(
+      rows,
+      transaction: transaction,
+    );
   }
 
   /// Deletes a single [MessageReaction].
@@ -465,7 +498,10 @@ class MessageReactionRepository {
     MessageReaction row, {
     _i1.Transaction? transaction,
   }) async {
-    return session.db.deleteRow<MessageReaction>(row, transaction: transaction);
+    return session.db.deleteRow<MessageReaction>(
+      row,
+      transaction: transaction,
+    );
   }
 
   /// Deletes all rows matching the [where] expression.

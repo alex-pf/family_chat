@@ -221,42 +221,88 @@ class _ChatImpl extends Chat {
 class ChatUpdateTable extends _i1.UpdateTable<ChatTable> {
   ChatUpdateTable(super.table);
 
-  _i1.ColumnValue<String, String> name(String value) =>
-      _i1.ColumnValue(table.name, value);
+  _i1.ColumnValue<String, String> name(String value) => _i1.ColumnValue(
+    table.name,
+    value,
+  );
 
-  _i1.ColumnValue<bool, bool> isGroup(bool value) =>
-      _i1.ColumnValue(table.isGroup, value);
+  _i1.ColumnValue<bool, bool> isGroup(bool value) => _i1.ColumnValue(
+    table.isGroup,
+    value,
+  );
 
-  _i1.ColumnValue<int, int> ownerUserId(int? value) =>
-      _i1.ColumnValue(table.ownerUserId, value);
+  _i1.ColumnValue<int, int> ownerUserId(int? value) => _i1.ColumnValue(
+    table.ownerUserId,
+    value,
+  );
 
-  _i1.ColumnValue<String, String> backgroundId(String value) =>
-      _i1.ColumnValue(table.backgroundId, value);
+  _i1.ColumnValue<String, String> backgroundId(String value) => _i1.ColumnValue(
+    table.backgroundId,
+    value,
+  );
 
-  _i1.ColumnValue<String, String> textColor(String value) =>
-      _i1.ColumnValue(table.textColor, value);
+  _i1.ColumnValue<String, String> textColor(String value) => _i1.ColumnValue(
+    table.textColor,
+    value,
+  );
 
-  _i1.ColumnValue<bool, bool> isArchived(bool value) =>
-      _i1.ColumnValue(table.isArchived, value);
+  _i1.ColumnValue<bool, bool> isArchived(bool value) => _i1.ColumnValue(
+    table.isArchived,
+    value,
+  );
 
   _i1.ColumnValue<DateTime, DateTime> createdAt(DateTime value) =>
-      _i1.ColumnValue(table.createdAt, value);
+      _i1.ColumnValue(
+        table.createdAt,
+        value,
+      );
 
   _i1.ColumnValue<DateTime, DateTime> updatedAt(DateTime value) =>
-      _i1.ColumnValue(table.updatedAt, value);
+      _i1.ColumnValue(
+        table.updatedAt,
+        value,
+      );
 }
 
 class ChatTable extends _i1.Table<int?> {
   ChatTable({super.tableRelation}) : super(tableName: 'chats') {
     updateTable = ChatUpdateTable(this);
-    name = _i1.ColumnString('name', this);
-    isGroup = _i1.ColumnBool('isGroup', this, hasDefault: true);
-    ownerUserId = _i1.ColumnInt('ownerUserId', this);
-    backgroundId = _i1.ColumnString('backgroundId', this, hasDefault: true);
-    textColor = _i1.ColumnString('textColor', this, hasDefault: true);
-    isArchived = _i1.ColumnBool('isArchived', this, hasDefault: true);
-    createdAt = _i1.ColumnDateTime('createdAt', this);
-    updatedAt = _i1.ColumnDateTime('updatedAt', this);
+    name = _i1.ColumnString(
+      'name',
+      this,
+    );
+    isGroup = _i1.ColumnBool(
+      'isGroup',
+      this,
+      hasDefault: true,
+    );
+    ownerUserId = _i1.ColumnInt(
+      'ownerUserId',
+      this,
+    );
+    backgroundId = _i1.ColumnString(
+      'backgroundId',
+      this,
+      hasDefault: true,
+    );
+    textColor = _i1.ColumnString(
+      'textColor',
+      this,
+      hasDefault: true,
+    );
+    isArchived = _i1.ColumnBool(
+      'isArchived',
+      this,
+      hasDefault: true,
+    );
+    createdAt = _i1.ColumnDateTime(
+      'createdAt',
+      this,
+    );
+    updatedAt = _i1.ColumnDateTime(
+      'updatedAt',
+      this,
+    );
   }
 
   late final ChatUpdateTable updateTable;
@@ -458,7 +504,10 @@ class ChatRepository {
     Chat row, {
     _i1.Transaction? transaction,
   }) async {
-    return session.db.insertRow<Chat>(row, transaction: transaction);
+    return session.db.insertRow<Chat>(
+      row,
+      transaction: transaction,
+    );
   }
 
   /// Updates all [Chat]s in the list and returns the updated rows. If
@@ -543,7 +592,10 @@ class ChatRepository {
     List<Chat> rows, {
     _i1.Transaction? transaction,
   }) async {
-    return session.db.delete<Chat>(rows, transaction: transaction);
+    return session.db.delete<Chat>(
+      rows,
+      transaction: transaction,
+    );
   }
 
   /// Deletes a single [Chat].
@@ -552,7 +604,10 @@ class ChatRepository {
     Chat row, {
     _i1.Transaction? transaction,
   }) async {
-    return session.db.deleteRow<Chat>(row, transaction: transaction);
+    return session.db.deleteRow<Chat>(
+      row,
+      transaction: transaction,
+    );
   }
 
   /// Deletes all rows matching the [where] expression.

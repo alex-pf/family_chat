@@ -14,10 +14,15 @@ import 'package:serverpod/serverpod.dart' as _i1;
 
 abstract class StorageStats
     implements _i1.SerializableModel, _i1.ProtocolSerialization {
-  StorageStats._({required this.totalBytes, required this.fileCount});
+  StorageStats._({
+    required this.totalBytes,
+    required this.fileCount,
+  });
 
-  factory StorageStats({required int totalBytes, required int fileCount}) =
-      _StorageStatsImpl;
+  factory StorageStats({
+    required int totalBytes,
+    required int fileCount,
+  }) = _StorageStatsImpl;
 
   factory StorageStats.fromJson(Map<String, dynamic> jsonSerialization) {
     return StorageStats(
@@ -33,7 +38,10 @@ abstract class StorageStats
   /// Returns a shallow copy of this [StorageStats]
   /// with some or all fields replaced by the given arguments.
   @_i1.useResult
-  StorageStats copyWith({int? totalBytes, int? fileCount});
+  StorageStats copyWith({
+    int? totalBytes,
+    int? fileCount,
+  });
   @override
   Map<String, dynamic> toJson() {
     return {
@@ -59,14 +67,22 @@ abstract class StorageStats
 }
 
 class _StorageStatsImpl extends StorageStats {
-  _StorageStatsImpl({required int totalBytes, required int fileCount})
-    : super._(totalBytes: totalBytes, fileCount: fileCount);
+  _StorageStatsImpl({
+    required int totalBytes,
+    required int fileCount,
+  }) : super._(
+         totalBytes: totalBytes,
+         fileCount: fileCount,
+       );
 
   /// Returns a shallow copy of this [StorageStats]
   /// with some or all fields replaced by the given arguments.
   @_i1.useResult
   @override
-  StorageStats copyWith({int? totalBytes, int? fileCount}) {
+  StorageStats copyWith({
+    int? totalBytes,
+    int? fileCount,
+  }) {
     return StorageStats(
       totalBytes: totalBytes ?? this.totalBytes,
       fileCount: fileCount ?? this.fileCount,

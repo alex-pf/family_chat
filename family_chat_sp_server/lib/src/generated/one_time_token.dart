@@ -181,31 +181,58 @@ class _OneTimeTokenImpl extends OneTimeToken {
 class OneTimeTokenUpdateTable extends _i1.UpdateTable<OneTimeTokenTable> {
   OneTimeTokenUpdateTable(super.table);
 
-  _i1.ColumnValue<String, String> token(String value) =>
-      _i1.ColumnValue(table.token, value);
+  _i1.ColumnValue<String, String> token(String value) => _i1.ColumnValue(
+    table.token,
+    value,
+  );
 
-  _i1.ColumnValue<int, int> userId(int value) =>
-      _i1.ColumnValue(table.userId, value);
+  _i1.ColumnValue<int, int> userId(int value) => _i1.ColumnValue(
+    table.userId,
+    value,
+  );
 
   _i1.ColumnValue<DateTime, DateTime> expiresAt(DateTime value) =>
-      _i1.ColumnValue(table.expiresAt, value);
+      _i1.ColumnValue(
+        table.expiresAt,
+        value,
+      );
 
   _i1.ColumnValue<DateTime, DateTime> usedAt(DateTime? value) =>
-      _i1.ColumnValue(table.usedAt, value);
+      _i1.ColumnValue(
+        table.usedAt,
+        value,
+      );
 
-  _i1.ColumnValue<int, int> requestedByUserId(int? value) =>
-      _i1.ColumnValue(table.requestedByUserId, value);
+  _i1.ColumnValue<int, int> requestedByUserId(int? value) => _i1.ColumnValue(
+    table.requestedByUserId,
+    value,
+  );
 }
 
 class OneTimeTokenTable extends _i1.Table<int?> {
   OneTimeTokenTable({super.tableRelation})
     : super(tableName: 'one_time_tokens') {
     updateTable = OneTimeTokenUpdateTable(this);
-    token = _i1.ColumnString('token', this);
-    userId = _i1.ColumnInt('userId', this);
-    expiresAt = _i1.ColumnDateTime('expiresAt', this);
-    usedAt = _i1.ColumnDateTime('usedAt', this);
-    requestedByUserId = _i1.ColumnInt('requestedByUserId', this);
+    token = _i1.ColumnString(
+      'token',
+      this,
+    );
+    userId = _i1.ColumnInt(
+      'userId',
+      this,
+    );
+    expiresAt = _i1.ColumnDateTime(
+      'expiresAt',
+      this,
+    );
+    usedAt = _i1.ColumnDateTime(
+      'usedAt',
+      this,
+    );
+    requestedByUserId = _i1.ColumnInt(
+      'requestedByUserId',
+      this,
+    );
   }
 
   late final OneTimeTokenUpdateTable updateTable;
@@ -398,7 +425,10 @@ class OneTimeTokenRepository {
     OneTimeToken row, {
     _i1.Transaction? transaction,
   }) async {
-    return session.db.insertRow<OneTimeToken>(row, transaction: transaction);
+    return session.db.insertRow<OneTimeToken>(
+      row,
+      transaction: transaction,
+    );
   }
 
   /// Updates all [OneTimeToken]s in the list and returns the updated rows. If
@@ -483,7 +513,10 @@ class OneTimeTokenRepository {
     List<OneTimeToken> rows, {
     _i1.Transaction? transaction,
   }) async {
-    return session.db.delete<OneTimeToken>(rows, transaction: transaction);
+    return session.db.delete<OneTimeToken>(
+      rows,
+      transaction: transaction,
+    );
   }
 
   /// Deletes a single [OneTimeToken].
@@ -492,7 +525,10 @@ class OneTimeTokenRepository {
     OneTimeToken row, {
     _i1.Transaction? transaction,
   }) async {
-    return session.db.deleteRow<OneTimeToken>(row, transaction: transaction);
+    return session.db.deleteRow<OneTimeToken>(
+      row,
+      transaction: transaction,
+    );
   }
 
   /// Deletes all rows matching the [where] expression.

@@ -165,27 +165,48 @@ class _MessageStatusImpl extends MessageStatus {
 class MessageStatusUpdateTable extends _i1.UpdateTable<MessageStatusTable> {
   MessageStatusUpdateTable(super.table);
 
-  _i1.ColumnValue<int, int> messageId(int value) =>
-      _i1.ColumnValue(table.messageId, value);
+  _i1.ColumnValue<int, int> messageId(int value) => _i1.ColumnValue(
+    table.messageId,
+    value,
+  );
 
-  _i1.ColumnValue<int, int> userId(int value) =>
-      _i1.ColumnValue(table.userId, value);
+  _i1.ColumnValue<int, int> userId(int value) => _i1.ColumnValue(
+    table.userId,
+    value,
+  );
 
-  _i1.ColumnValue<String, String> status(String value) =>
-      _i1.ColumnValue(table.status, value);
+  _i1.ColumnValue<String, String> status(String value) => _i1.ColumnValue(
+    table.status,
+    value,
+  );
 
   _i1.ColumnValue<DateTime, DateTime> updatedAt(DateTime value) =>
-      _i1.ColumnValue(table.updatedAt, value);
+      _i1.ColumnValue(
+        table.updatedAt,
+        value,
+      );
 }
 
 class MessageStatusTable extends _i1.Table<int?> {
   MessageStatusTable({super.tableRelation})
     : super(tableName: 'message_statuses') {
     updateTable = MessageStatusUpdateTable(this);
-    messageId = _i1.ColumnInt('messageId', this);
-    userId = _i1.ColumnInt('userId', this);
-    status = _i1.ColumnString('status', this);
-    updatedAt = _i1.ColumnDateTime('updatedAt', this);
+    messageId = _i1.ColumnInt(
+      'messageId',
+      this,
+    );
+    userId = _i1.ColumnInt(
+      'userId',
+      this,
+    );
+    status = _i1.ColumnString(
+      'status',
+      this,
+    );
+    updatedAt = _i1.ColumnDateTime(
+      'updatedAt',
+      this,
+    );
   }
 
   late final MessageStatusUpdateTable updateTable;
@@ -199,7 +220,13 @@ class MessageStatusTable extends _i1.Table<int?> {
   late final _i1.ColumnDateTime updatedAt;
 
   @override
-  List<_i1.Column> get columns => [id, messageId, userId, status, updatedAt];
+  List<_i1.Column> get columns => [
+    id,
+    messageId,
+    userId,
+    status,
+    updatedAt,
+  ];
 }
 
 class MessageStatusInclude extends _i1.IncludeObject {
@@ -369,7 +396,10 @@ class MessageStatusRepository {
     MessageStatus row, {
     _i1.Transaction? transaction,
   }) async {
-    return session.db.insertRow<MessageStatus>(row, transaction: transaction);
+    return session.db.insertRow<MessageStatus>(
+      row,
+      transaction: transaction,
+    );
   }
 
   /// Updates all [MessageStatus]s in the list and returns the updated rows. If
@@ -454,7 +484,10 @@ class MessageStatusRepository {
     List<MessageStatus> rows, {
     _i1.Transaction? transaction,
   }) async {
-    return session.db.delete<MessageStatus>(rows, transaction: transaction);
+    return session.db.delete<MessageStatus>(
+      rows,
+      transaction: transaction,
+    );
   }
 
   /// Deletes a single [MessageStatus].
@@ -463,7 +496,10 @@ class MessageStatusRepository {
     MessageStatus row, {
     _i1.Transaction? transaction,
   }) async {
-    return session.db.deleteRow<MessageStatus>(row, transaction: transaction);
+    return session.db.deleteRow<MessageStatus>(
+      row,
+      transaction: transaction,
+    );
   }
 
   /// Deletes all rows matching the [where] expression.
