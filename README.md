@@ -1,319 +1,252 @@
 # FamilyChat
 
-Приватный семейный мессенджер с реал-тайм чатами, построенный на [Serverpod](https://serverpod.dev/) 3.4.6 и Flutter.
+Семейный чат с аутентификацией, ролевой моделью и расширяемой архитектурой.
+
+**Стек:** Flutter 3.32.8 · Serverpod 3.4.6 · PostgreSQL · GitHub Actions  
+**Frontend:** GitHub Pages (Flutter Web / WASM)  
+**Backend:** VPS, systemd-сервис, nginx reverse proxy, Let's Encrypt SSL
 
 ---
 
-## Содержание
-
-1. [Что такое FamilyChat](#что-такое-familychat)
-2. [Архитектура](#архитектура)
-3. [Локальная разработка](#локальная-разработка)
-4. [Первоначальная настройка VPS](#первоначальная-настройка-vps)
-5. [GitHub Secrets](#github-secrets)
-6. [CI/CD — как работает деплой](#cicd--как-работает-деплой)
-7. [Первый запуск и создание Admin](#первый-запуск-и-создание-admin)
-
----
-
-## Что такое FamilyChat
-
-FamilyChat — закрытый мессенджер для семьи. Позволяет создавать групповые и личные чаты, обмениваться сообщениями в реальном времени. Доступ по приглашению — только Admin может регистрировать новых пользователей.
-
-**Ключевые особенности:**
-- Реал-тайм WebSocket-чат (Serverpod streaming)
-- Flutter Web + мобильные платформы из одной кодовой базы
-- Аутентификация через JWT (Serverpod auth)
-- Самостоятельный хостинг на своём VPS
-
----
-
-## Архитектура
+## Структура репозитория
 
 ```
-┌─────────────────────────────────────────┐
-│            Flutter Client               │
-│  (Web / Android / iOS)                  │
-│  family_chat_flutter/                   │
-└──────────────┬──────────────────────────┘
-               │ HTTPS / WSS (port 443)
-               │ via Nginx reverse proxy
-┌──────────────▼──────────────────────────┐
-│          Serverpod Server               │
-│  family_chat_server/  (port 8080)       │
-│                                         │
-│  Endpoints → ORM → PostgreSQL           │
-│  Message Bus → WebSocket streams        │
-└──────────────┬──────────────────────────┘
-               │
-┌──────────────▼──────────────────────────┐
-│           PostgreSQL                    │
-│  family_chat_db                         │
-└─────────────────────────────────────────┘
-```
-
-**Стек:**
-| Компонент | Технология | Версия |
-|-----------|-----------|--------|
-| Backend   | Serverpod | 3.4.6  |
-| Language  | Dart      | ^3.8.0 |
-| Frontend  | Flutter   | ^3.32.0|
-| Database  | PostgreSQL| 14+    |
-| Web-сервер| Nginx     | —      |
-| CI/CD     | GitHub Actions | — |
-
-**Структура репозитория:**
-```
-family_chat/
-├── family_chat_server/    # Dart/Serverpod backend
-│   ├── bin/main.dart      # Точка входа
-│   ├── lib/server.dart    # Инициализация
-│   ├── lib/src/           # Endpoints, models
-│   ├── config/            # production.yaml (passwords.yaml — вне git)
-│   └── migrations/        # SQL-миграции
-├── family_chat_client/    # Dart client (генерируется Serverpod)
-├── family_chat_flutter/   # Flutter приложение
+family_chat_sp/
+├── family_chat_sp_server/     # Dart-бэкенд (Serverpod)
+│   ├── bin/main.dart
+│   ├── lib/
+│   ├── config/
+│   │   └── production.yaml    # Конфиг сервера (домен, БД, порты)
+│   └── migrations/            # Миграции БД (Serverpod built-in)
+├── family_chat_sp_client/     # Сгенерированный Dart-клиент
+├── family_chat_sp_flutter/    # Flutter-приложение
 ├── deploy/
-│   ├── setup_vps.sh       # Первоначальная настройка VPS
-│   └── update_admin_env.sh# Очистка Admin env после первого запуска
-├── .github/workflows/
-│   └── deploy.yml         # CI/CD: Flutter Web + VPS деплой
-├── .gitignore
-└── README.md
+│   ├── setup_vps.sh           # Регистрация SSH-ключа на VPS (только это!)
+│   └── update_admin_env.sh    # Обновление env для admin-пользователя
+└── .github/workflows/
+    ├── first_deploy.yml       # Первичная настройка нового сервера
+    └── deploy.yml             # Обычный деплой при push в main
 ```
-
----
-
-## Локальная разработка
-
-### Требования
-- [Dart SDK](https://dart.dev/get-dart) ^3.8.0
-- [Flutter SDK](https://flutter.dev/docs/get-started/install) ^3.32.0
-- [Serverpod CLI](https://docs.serverpod.dev/get-started): `dart pub global activate serverpod_cli`
-- PostgreSQL (локальный или Docker)
-- Docker (опционально, для `serverpod run`)
-
-### Запуск
-
-```bash
-# 1. Клонировать репозиторий
-git clone https://github.com/alex-pf/family_chat.git
-cd family_chat
-
-# 2. Запустить сервер (dev-режим с hot reload)
-cd family_chat_server
-dart pub get
-dart run bin/main.dart --mode development
-
-# 3. В другом терминале — Flutter приложение
-cd ../family_chat_flutter
-flutter pub get
-flutter run -d chrome  # или другое устройство
-
-# 4. Регенерировать код после изменения .spy.yaml моделей
-cd ../family_chat_server
-serverpod generate
-```
-
-### Конфиг для dev
-
-Создайте `family_chat_server/config/development.yaml` (не в git):
-```yaml
-apiServer:
-  port: 8080
-  publicHost: localhost
-  publicPort: 8080
-  publicScheme: http
-
-database:
-  host: localhost
-  port: 5432
-  name: family_chat_db
-  user: family_chat_user
-  requireSsl: false
-
-redis:
-  enabled: false
-```
-
----
-
-## Первоначальная настройка VPS
-
-Скрипт `deploy/setup_vps.sh` выполняет всё необходимое за один запуск.
-
-### Что делает скрипт:
-1. Устанавливает Nginx, PostgreSQL, Certbot, Dart SDK
-2. Создаёт пользователя `deploy` с нужными правами
-3. Создаёт директорию `/opt/family_chat/` с правильными разрешениями
-4. Настраивает PostgreSQL: создаёт БД и пользователя
-5. Генерирует `/opt/family_chat/config/production.yaml`
-6. Создаёт и активирует systemd-сервис `family-chat`
-7. Настраивает Nginx с поддержкой WebSocket и reverse proxy
-
-### Запуск (от root):
-
-```bash
-# Подключиться к VPS
-ssh root@YOUR_VPS_IP
-
-# Скачать и запустить скрипт
-curl -O https://raw.githubusercontent.com/alex-pf/family_chat/main/deploy/setup_vps.sh
-bash setup_vps.sh chat.example.com
-```
-
-### После запуска скрипта:
-
-1. **Добавить SSH-ключ** (публичный от `VPS_SERVER_KEY`) в `/home/deploy/.ssh/authorized_keys`
-2. **Получить SSL-сертификат:**
-   ```bash
-   certbot --nginx -d chat.example.com
-   ```
-3. **Добавить GitHub Secrets** (см. раздел ниже)
-4. **Сделать push в main** — CI/CD задеплоит сервер
 
 ---
 
 ## GitHub Secrets
 
-Перейдите в `Settings → Secrets and variables → Actions` вашего репозитория и добавьте:
+Все секреты хранятся в **Settings → Secrets and variables → Actions**.
 
-### Уже настроены (инфраструктурные):
-
-| Secret | Описание |
+| Секрет | Описание |
 |--------|----------|
-| `VPS_IP` | IP-адрес VPS сервера |
-| `VPS_SERVER_KEY` | Приватный SSH-ключ для пользователя `deploy` на VPS |
+| `VPS_IP` | IP-адрес VPS |
+| `VPS_SERVER_KEY` | Приватный SSH-ключ (один для `root` и `USER_NAME`) |
+| `USER_NAME` | Имя deploy-пользователя на сервере (например: `devuser`) |
+| `SERVER_DOMAIN` | Домен (например: `chat.example.com`) |
 | `ADMIN_EMAIL` | Email первого администратора |
 | `ADMIN_INITIAL_PASSWORD` | Начальный пароль администратора |
+| `DB_PASSWORD` | Пароль PostgreSQL для `family_chat_user` |
+| `SERVICE_SECRET` | `openssl rand -hex 32` |
+| `EMAIL_PEPPER` | `openssl rand -hex 32` |
+| `JWT_PRIVATE_KEY` | `openssl rand -hex 64` |
+| `JWT_REFRESH_PEPPER` | `openssl rand -hex 32` |
 
-### Необходимо добавить (production secrets для Serverpod):
-
-| Secret | Описание | Как сгенерировать |
-|--------|----------|-------------------|
-| `DB_PASSWORD` | Пароль PostgreSQL для `family_chat_user` | Выводится скриптом `setup_vps.sh` |
-| `SERVICE_SECRET` | Секрет Serverpod для межсервисной связи | `openssl rand -hex 32` |
-| `EMAIL_PEPPER` | Pepper для хеширования email | `openssl rand -hex 32` |
-| `JWT_PRIVATE_KEY` | HMAC-SHA512 ключ для JWT токенов | `openssl rand -hex 64` |
-| `JWT_REFRESH_PEPPER` | Pepper для refresh токенов | `openssl rand -hex 32` |
-
-> **Важно:** Никогда не добавляйте `passwords.yaml` или любые ключи в git. Файл `/opt/family_chat/config/passwords.yaml` создаётся автоматически CI/CD при каждом деплое через SSH и не попадает в репозиторий.
+> `ADMIN_EMAIL` и `ADMIN_INITIAL_PASSWORD` также передаются как **inputs** при запуске `first_deploy.yml` — они попадают в `ExecStart` systemd-сервиса как переменные окружения.
 
 ---
 
-## CI/CD — как работает деплой
+## Деплой с нуля (новый сервер)
 
-Workflow `.github/workflows/deploy.yml` запускается при каждом `push` в ветку `main` и выполняет **два независимых job**:
+### Шаг 1 — Сгенерировать SSH-ключ
 
-### Job 1: `deploy-flutter-web`
-
-```
-push to main
-    ↓
-Checkout code
-    ↓
-Setup Flutter (stable channel, с кешем)
-    ↓
-flutter pub get + flutter build web --base-href /family_chat/ --wasm
-    ↓
-Upload artifact → Deploy to GitHub Pages
-    ↓
-Flutter Web доступен по адресу GitHub Pages
+```bash
+# На локальной машине
+ssh-keygen -t ed25519 -C "family-chat-deploy" -f ~/.ssh/family_chat_deploy
 ```
 
-### Job 2: `deploy-server`
+Это создаст:
+- `~/.ssh/family_chat_deploy` — **приватный ключ** → GitHub Secret `VPS_SERVER_KEY`
+- `~/.ssh/family_chat_deploy.pub` — **публичный ключ** → прописать на VPS (шаг 2)
 
-```
-push to main
-    ↓
-Checkout code
-    ↓
-Setup Dart SDK (stable)
-    ↓
-dart pub get + dart compile exe bin/main.dart → family_chat_server_bin
-    ↓
-SSH: Создать/обновить /opt/family_chat/config/passwords.yaml из GitHub Secrets
-    ↓
-SCP: Скопировать бинарник + конфиги + миграции на VPS → /opt/family_chat/
-    ↓
-SSH: chmod +x бинарник → sudo systemctl restart family-chat
-    ↓
-SSH: sudo systemctl status family-chat (проверка)
+### Шаг 2 — Зарегистрировать ключ на VPS
+
+Зайдите на сервер как `root` и выполните скрипт, передав публичный ключ:
+
+```bash
+ssh root@<VPS_IP>
+
+bash <(curl -fsSL https://raw.githubusercontent.com/alex-pf/family_chat/main/deploy/setup_vps.sh) \
+  "$(cat ~/.ssh/family_chat_deploy.pub)"
 ```
 
-**Почему компиляция в CI, а не на VPS?**
-- Быстрее: GitHub Actions имеет мощные runner-машины
-- Проще VPS: не нужен Dart SDK на сервере
-- Надёжнее: чистая среда без локальных зависимостей
+Скрипт делает ровно одно: добавляет ключ в `/root/.ssh/authorized_keys`.  
+Дальше всё делает GitHub Actions.
 
-**Флаг `--apply-migrations`** в systemd ExecStart автоматически применяет новые SQL-миграции при каждом запуске. Serverpod отслеживает какие миграции уже применены — повторного применения не будет.
+> **Примечание:** один и тот же ключ работает для `root` и `USER_NAME`.  
+> Workflow `first_deploy.yml` автоматически скопирует `authorized_keys` из `root` в домашнюю директорию `USER_NAME`.
+
+### Шаг 3 — Добавить GitHub Secrets
+
+Добавьте все секреты из таблицы выше в **Settings → Secrets and variables → Actions**.
+
+Для генерации случайных значений:
+```bash
+openssl rand -hex 32   # для SERVICE_SECRET, EMAIL_PEPPER, JWT_REFRESH_PEPPER
+openssl rand -hex 64   # для JWT_PRIVATE_KEY
+```
+
+### Шаг 4 — Запустить First Deploy
+
+В GitHub: **Actions → "First Deploy — VPS Setup" → Run workflow**
+
+Заполните inputs:
+- **Домен сервера** — например `chat.example.com`
+- **Email администратора**
+- **Начальный пароль администратора** (будет изменён при первом входе)
+
+Workflow выполняет 4 последовательных джоба:
+
+| Джоб | От имени | Что делает |
+|------|----------|------------|
+| `bootstrap-root` | `root` | Устанавливает пакеты (nginx, postgresql, certbot, ufw), создаёт БД `family_chat_db` и пользователя `family_chat_user`, копирует SSH-ключ для `USER_NAME`, настраивает sudoers и firewall |
+| `setup-vps` | `USER_NAME` | Создаёт директории `~/family_chat/`, записывает `production.yaml`, создаёт и включает systemd-сервис `family-chat`, конфигурирует nginx |
+| `obtain-ssl` | `USER_NAME` | Получает SSL-сертификат Let's Encrypt через certbot (standalone), перезапускает nginx |
+| `first-server-deploy` + `first-flutter-deploy` | `USER_NAME` | Компилирует сервер и Flutter Web параллельно, деплоит сервер на VPS, деплоит Flutter на GitHub Pages |
+
+После успешного завершения — приложение доступно по домену.
 
 ---
 
-## Первый запуск и создание Admin
+## Обычный деплой (push в main)
 
-Перед первым деплоем необходимо передать credentials Admin в systemd-сервис:
+Workflow `deploy.yml` запускается автоматически при каждом `git push` в ветку `main`.
 
-### Шаг 1: Задать credentials Admin на VPS
+Параллельно:
+1. **Flutter Web** — собирается (WASM, `--dart-define=SERVER_URL=https://...`) и деплоится на GitHub Pages
+2. **Serverpod Server** — компилируется в бинарник, копируется на VPS, сервис перезапускается
 
-```bash
-# SSH на VPS от root
-ssh root@YOUR_VPS_IP
-
-# Открыть файл сервиса
-nano /etc/systemd/system/family-chat.service
-
-# Найти строки и заполнить:
-Environment="ADMIN_EMAIL=admin@example.com"
-Environment="ADMIN_INITIAL_PASSWORD=SecurePassword123!"
-
-# Применить изменения
-systemctl daemon-reload
-```
-
-### Шаг 2: Первый деплой
-
-```bash
-git push origin main
-```
-
-GitHub Actions:
-1. Скомпилирует сервер
-2. Запишет `passwords.yaml` на VPS
-3. Скопирует бинарник и миграции
-4. Перезапустит `family-chat` сервис
-
-При первом запуске сервер прочтёт `ADMIN_EMAIL` и `ADMIN_INITIAL_PASSWORD` из env и создаст учётную запись администратора.
-
-### Шаг 3: Очистить credentials после первого входа
-
-После того как вы убедились, что Admin-аккаунт работает:
-
-```bash
-# На VPS
-sudo bash /opt/family_chat/update_admin_env.sh
-sudo systemctl restart family-chat
-```
-
-Это обнулит переменные в systemd — повторного создания Admin не произойдёт.
+Миграции применяются автоматически при старте сервера (флаг `--apply-migrations` в `ExecStart`).
 
 ---
 
-## Полезные команды для обслуживания
+## Первый вход в приложение
+
+После деплоя:
+
+1. Откройте `https://<YOUR_GITHUB_USERNAME>.github.io/family_chat/`
+2. Войдите с `ADMIN_EMAIL` и `ADMIN_INITIAL_PASSWORD`
+3. Система предложит сменить пароль при первом входе (`mustChangePassword = true`)
+4. После смены пароля откроется полный интерфейс с системным чатом и панелью администратора
+
+---
+
+## Архитектура
+
+### Сервер
+
+- **Порты:** 8080 (API), 8081 (Insights), 8082 (Web)
+- **Nginx** проксирует HTTPS → `http://127.0.0.1:8080`
+  - `proxy_pass http://127.0.0.1:8080` (не `localhost` — во избежание проблем с IPv6)
+  - `map $http_upgrade $connection_upgrade` — корректная обработка WebSocket и обычных HTTP-запросов
+- **БД:** `family_chat_db` / `family_chat_user`
+- **Директория приложения:** `~/family_chat/` (т.е. `/home/<USER_NAME>/family_chat/`)
+- **Systemd-сервис:** `family-chat`
+
+### Аутентификация
+
+- Email + пароль через Serverpod Auth
+- Access token + refresh token (refresh протухает через **1 месяц неактивности**)
+- Google/Apple Sign-In — не реализованы, но архитектурно заложены
+- «Спросить администратора» — одноразовый токен на 15 минут
+
+### Роли пользователей
+
+`superAdmin` · `admin` · `moderator` · `user` · `guest` · `banned` · `pendingApproval`
+
+### Первый администратор
+
+При первом старте сервер читает из env:
+- `ADMIN_EMAIL` — email администратора
+- `ADMIN_INITIAL_PASSWORD` — начальный пароль
+
+Эти переменные попадают в systemd через `ExecStart` и устанавливаются в `first_deploy.yml` inputs.
+
+### Расширяемость
+
+Архитектура рассчитана на рост:
+- Flutter Web сейчас → нативные iOS/Android/Desktop в будущем
+- Встроенные игры и дополнительные функции
+- Миграции БД — через встроенный механизм Serverpod
+
+---
+
+## Структура сервера на VPS
+
+```
+~/family_chat/
+├── family_chat_server_bin   # Скомпилированный бинарник (Dart AOT)
+├── config/
+│   ├── production.yaml      # Конфиг (порты, БД, домен)
+│   └── passwords.yaml       # Секреты (создаётся workflow, chmod 600)
+├── migrations/              # Файлы миграций Serverpod
+└── data/                    # Данные приложения
+```
+
+---
+
+## Полезные команды
 
 ```bash
 # Статус сервиса
 sudo systemctl status family-chat
 
 # Логи в реальном времени
-journalctl -u family-chat -f
+sudo journalctl -u family-chat -f
 
-# Перезапуск
+# Последние 50 строк логов
+sudo journalctl -u family-chat -n 50 --no-pager
+
+# Перезапуск вручную
 sudo systemctl restart family-chat
 
-# Проверить nginx конфиг
-nginx -t
+# Проверка nginx
+sudo nginx -t && sudo systemctl reload nginx
 
-# Обновить SSL сертификат
-certbot renew --dry-run
+# Проверка подключения к API
+curl -s https://<DOMAIN>/
+
+# Посмотреть таблицы БД
+sudo -u postgres psql family_chat_db -c "\dt"
 ```
+
+---
+
+## Диагностика
+
+### Сервис не запускается
+
+```bash
+sudo journalctl -u family-chat -n 50 --no-pager
+```
+
+Частые причины:
+- Неверный пароль БД → проверьте `~/family_chat/config/passwords.yaml`
+- Неверное имя БД/пользователя → проверьте `~/family_chat/config/production.yaml` (должно быть `family_chat_db` / `family_chat_user`)
+- Бинарник без прав на исполнение → `chmod +x ~/family_chat/family_chat_server_bin`
+
+### nginx возвращает «No method name specified»
+
+Проверьте наличие `map $http_upgrade $connection_upgrade` в конфиге nginx и что заголовок `Connection` установлен в `$connection_upgrade` (не хардкодом `"upgrade"`).
+
+### Ошибка подключения в браузере (ERR_TIMED_OUT)
+
+Убедитесь, что `proxy_pass` указывает на `http://127.0.0.1:8080`, а не на `localhost` — на некоторых серверах `localhost` резолвится в IPv6-адрес `[::1]`, что вызывает таймаут.
+
+### Таблицы не создались после миграции
+
+Убедитесь, что бинарник запускается с флагом `--apply-migrations` (прописано в `ExecStart` systemd-сервиса).
+
+---
+
+## Ссылки
+
+- **Приложение:** https://alex-pf.github.io/family_chat/
+- **Serverpod docs:** https://docs.serverpod.dev
+- **Flutter docs:** https://docs.flutter.dev
