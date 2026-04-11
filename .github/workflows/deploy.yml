@@ -1,5 +1,7 @@
 name: Deploy FamilyChat
 
+# Запускается при каждом push в main или вручную.
+# Предполагает, что сервер уже настроен через "First Deploy — VPS Setup".
 on:
   push:
     branches:
@@ -20,6 +22,7 @@ jobs:
   # Job 1: Build Flutter Web → GitHub Pages
   # ────────────────────────────────────────────────────────────────
   deploy-flutter-web:
+    name: Flutter Web → GitHub Pages
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -53,6 +56,7 @@ jobs:
   # Job 2: Build Dart Server → Deploy to VPS
   # ────────────────────────────────────────────────────────────────
   deploy-server:
+    name: Serverpod Server → VPS
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -68,13 +72,12 @@ jobs:
           flutter pub get
           dart compile exe bin/main.dart -o family_chat_server_bin
 
-      - name: Patch production.yaml
+      - name: Patch production.yaml with domain
         working-directory: family_chat_sp_server
         run: |
-          grep -q "DOMAIN_PLACEHOLDER" config/production.yaml
           sed -i "s/DOMAIN_PLACEHOLDER/${{ secrets.SERVER_DOMAIN }}/g" config/production.yaml
 
-      - name: Prepare folders on VPS
+      - name: Prepare directories on VPS
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_IP }}
@@ -84,7 +87,7 @@ jobs:
             mkdir -p ~/family_chat/config
             mkdir -p ~/family_chat/migrations
 
-      - name: Write passwords config on VPS
+      - name: Write passwords.yaml on VPS
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_IP }}
@@ -101,7 +104,7 @@ jobs:
             YAML
             chmod 600 ~/family_chat/config/passwords.yaml
 
-      - name: Copy artifacts to VPS
+      - name: Copy binary, config & migrations to VPS
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VPS_IP }}
@@ -114,7 +117,7 @@ jobs:
           target: ~/family_chat/
           strip_components: 1
 
-      - name: Restart server
+      - name: Restart server & verify
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_IP }}
@@ -125,4 +128,6 @@ jobs:
             sudo systemctl restart family-chat
             sleep 5
             sudo systemctl status family-chat --no-pager -l
-            sudo journalctl -u family-chat -n 100 --no-pager
+            echo ""
+            echo "=== Last 30 log lines ==="
+            sudo journalctl -u family-chat -n 30 --no-pager
