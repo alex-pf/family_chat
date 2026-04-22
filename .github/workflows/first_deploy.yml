@@ -81,9 +81,10 @@ jobs:
             echo "  => PostgreSQL ready"
 
             echo "=== [4/4] Sudoers for $USER ==="
-            echo "$USER ALL=(ALL) NOPASSWD: /bin/systemctl restart family-chat, /bin/systemctl start family-chat, /bin/systemctl stop family-chat, /bin/systemctl status family-chat, /bin/systemctl daemon-reload, /bin/systemctl reload nginx, /bin/systemctl stop nginx, /bin/systemctl start nginx, /usr/bin/certbot" \
+            printf '%s ALL=(ALL) NOPASSWD: /bin/systemctl restart family-chat, /bin/systemctl start family-chat, /bin/systemctl stop family-chat, /bin/systemctl status family-chat, /bin/systemctl daemon-reload, /bin/systemctl enable family-chat, /bin/systemctl reload nginx, /bin/systemctl stop nginx, /bin/systemctl start nginx, /usr/bin/certbot, /usr/bin/tee, /bin/sed, /bin/rm, /bin/ln, /usr/sbin/nginx, /usr/bin/journalctl\n' "$USER" \
               > /etc/sudoers.d/deploy-family-chat
             chmod 440 /etc/sudoers.d/deploy-family-chat
+            visudo -c -f /etc/sudoers.d/deploy-family-chat && echo "  => sudoers OK" || (cat /etc/sudoers.d/deploy-family-chat && exit 1)
 
             echo "=== Firewall ==="
             ufw allow OpenSSH
