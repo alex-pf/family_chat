@@ -1,11 +1,11 @@
-name: First Deploy — Docker Setup
+name: First Deploy
 
 # Запускается ТОЛЬКО вручную, один раз при первоначальной настройке нового сервера.
 # После успешного выполнения используйте обычный workflow "Deploy FamilyChat".
 #
 # Требуемые GitHub Secrets:
 #   VPS_IP               — IP сервера
-#   VPS_SERVER_KEY       — приватный SSH-ключ (один для root и USER_NAME)
+#   VPS_SERVER_KEY       — приватный SSH-ключ для USER_NAME
 #   USER_NAME            — имя deploy-пользователя (например: devuser)
 #   SERVER_DOMAIN        — домен сервера (используется при сборке Flutter)
 #   DB_PASSWORD          — пароль PostgreSQL
@@ -38,61 +38,11 @@ permissions:
 
 jobs:
   # ────────────────────────────────────────────────────────────────
-  # Job 1: root — установка Docker, добавление devuser в группу docker
-  # ────────────────────────────────────────────────────────────────
-  bootstrap-root:
-    name: Bootstrap Docker (root)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Install Docker & add user to docker group
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.VPS_IP }}
-          username: root
-          key: ${{ secrets.VPS_SERVER_KEY }}
-          script: |
-            set -e
-            USER="${{ secrets.USER_NAME }}"
-
-            echo "=== [1/3] Installing Docker ==="
-            if ! command -v docker &>/dev/null; then
-              curl -fsSL https://get.docker.com | sh
-            else
-              echo "  => Docker already installed"
-            fi
-            docker --version
-
-            echo "=== [2/3] Ensuring user $USER exists ==="
-            id "$USER" &>/dev/null || useradd -m -s /bin/bash "$USER"
-            USER_HOME=$(getent passwd "$USER" | cut -d: -f6)
-
-            # Прописать тот же SSH-ключ для USER_NAME
-            mkdir -p "$USER_HOME/.ssh"
-            cp /root/.ssh/authorized_keys "$USER_HOME/.ssh/authorized_keys"
-            chmod 700 "$USER_HOME/.ssh"
-            chmod 600 "$USER_HOME/.ssh/authorized_keys"
-            chown -R "$USER:$USER" "$USER_HOME/.ssh"
-            echo "  => SSH key copied to $USER"
-
-            echo "=== [3/3] Adding $USER to docker group ==="
-            usermod -aG docker "$USER"
-
-            echo "=== Firewall ==="
-            apt-get install -y -qq ufw
-            ufw allow OpenSSH
-            ufw allow 80/tcp
-            ufw allow 443/tcp
-            ufw --force enable
-
-            echo "  => Done. Docker installed, $USER in docker group."
-
-  # ────────────────────────────────────────────────────────────────
-  # Job 2: devuser — создание папок и конфигов
+  # Job 1: devuser — создание папок и конфигов
   # ────────────────────────────────────────────────────────────────
   setup-config:
     name: Setup Config (devuser)
     runs-on: ubuntu-latest
-    needs: bootstrap-root
     steps:
       - uses: actions/checkout@v5
 
@@ -182,7 +132,6 @@ jobs:
   build-and-push:
     name: Build & Push Docker Image
     runs-on: ubuntu-latest
-    needs: bootstrap-root
     steps:
       - uses: actions/checkout@v5
 
