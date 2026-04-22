@@ -26,7 +26,7 @@ webServer:
 # Database configuration.
 # Set actual credentials via env variables or passwords.yaml on the server.
 database:
-  host: localhost
+  host: db
   port: 5432
   name: family_chat_db
   user: family_chat_user

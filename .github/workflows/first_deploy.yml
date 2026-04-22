@@ -1,4 +1,4 @@
-name: First Deploy — VPS Setup
+name: First Deploy — Docker Setup
 
 # Запускается ТОЛЬКО вручную, один раз при первоначальной настройке нового сервера.
 # После успешного выполнения используйте обычный workflow "Deploy FamilyChat".
@@ -30,17 +30,21 @@ on:
         required: true
         default: ''
 
+permissions:
+  contents: read
+  packages: write
+  pages: write
+  id-token: write
+
 jobs:
   # ────────────────────────────────────────────────────────────────
-  # Шаг 1: root — установка пакетов, PostgreSQL, sudoers
-  # Заходим как root, используя тот же ключ VPS_SERVER_KEY
-  # (ключ должен быть прописан в /root/.ssh/authorized_keys)
+  # Job 1: root — установка Docker, добавление devuser в группу docker
   # ────────────────────────────────────────────────────────────────
   bootstrap-root:
-    name: Bootstrap (root)
+    name: Bootstrap Docker (root)
     runs-on: ubuntu-latest
     steps:
-      - name: Install packages & configure PostgreSQL
+      - name: Install Docker & add user to docker group
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_IP }}
@@ -49,59 +53,50 @@ jobs:
           script: |
             set -e
             USER="${{ secrets.USER_NAME }}"
-            USER_HOME=$(getent passwd "$USER" | cut -d: -f6)
 
-            echo "=== [1/4] Installing system packages ==="
-            apt-get update -qq
-            apt-get install -y -qq \
-              nginx postgresql postgresql-contrib \
-              certbot python3-certbot-nginx \
-              curl gnupg ufw
+            echo "=== [1/3] Installing Docker ==="
+            if ! command -v docker &>/dev/null; then
+              curl -fsSL https://get.docker.com | sh
+            else
+              echo "  => Docker already installed"
+            fi
+            docker --version
 
-            echo "=== [2/4] Ensuring user $USER exists ==="
+            echo "=== [2/3] Ensuring user $USER exists ==="
             id "$USER" &>/dev/null || useradd -m -s /bin/bash "$USER"
             USER_HOME=$(getent passwd "$USER" | cut -d: -f6)
 
             # Прописать тот же SSH-ключ для USER_NAME
             mkdir -p "$USER_HOME/.ssh"
-            # Копируем authorized_keys из root (ключ уже там — он нас сюда пустил)
             cp /root/.ssh/authorized_keys "$USER_HOME/.ssh/authorized_keys"
             chmod 700 "$USER_HOME/.ssh"
             chmod 600 "$USER_HOME/.ssh/authorized_keys"
             chown -R "$USER:$USER" "$USER_HOME/.ssh"
             echo "  => SSH key copied to $USER"
 
-            echo "=== [3/4] PostgreSQL ==="
-            sudo -u postgres psql -tc "SELECT 1 FROM pg_roles WHERE rolname='family_chat_user'" | grep -q 1 || \
-              sudo -u postgres psql -c "CREATE USER family_chat_user WITH PASSWORD '${{ secrets.DB_PASSWORD }}';"
-            sudo -u postgres psql -c "ALTER USER family_chat_user WITH PASSWORD '${{ secrets.DB_PASSWORD }}';"
-            sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='family_chat_db'" | grep -q 1 || \
-              sudo -u postgres psql -c "CREATE DATABASE family_chat_db OWNER family_chat_user;"
-            sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE family_chat_db TO family_chat_user;"
-            echo "  => PostgreSQL ready"
-
-            echo "=== [4/4] Sudoers for $USER ==="
-            printf '%s ALL=(ALL) NOPASSWD: /bin/systemctl restart family-chat, /bin/systemctl start family-chat, /bin/systemctl stop family-chat, /bin/systemctl status family-chat, /bin/systemctl daemon-reload, /bin/systemctl enable family-chat, /bin/systemctl reload nginx, /bin/systemctl stop nginx, /bin/systemctl start nginx, /usr/bin/certbot, /usr/bin/tee, /bin/sed, /bin/rm, /bin/ln, /usr/sbin/nginx, /usr/bin/journalctl\n' "$USER" \
-              > /etc/sudoers.d/deploy-family-chat
-            chmod 440 /etc/sudoers.d/deploy-family-chat
-            visudo -c -f /etc/sudoers.d/deploy-family-chat && echo "  => sudoers OK" || (cat /etc/sudoers.d/deploy-family-chat && exit 1)
+            echo "=== [3/3] Adding $USER to docker group ==="
+            usermod -aG docker "$USER"
 
             echo "=== Firewall ==="
+            apt-get install -y -qq ufw
             ufw allow OpenSSH
             ufw allow 80/tcp
             ufw allow 443/tcp
             ufw --force enable
-            echo "  => Done"
+
+            echo "  => Done. Docker installed, $USER in docker group."
 
   # ────────────────────────────────────────────────────────────────
-  # Шаг 2: USER_NAME — папки, production.yaml, systemd, nginx
+  # Job 2: devuser — создание папок и конфигов
   # ────────────────────────────────────────────────────────────────
-  setup-vps:
-    name: Setup VPS (app config)
+  setup-config:
+    name: Setup Config (devuser)
     runs-on: ubuntu-latest
     needs: bootstrap-root
     steps:
-      - name: Create directories, configs, systemd service & nginx
+      - uses: actions/checkout@v5
+
+      - name: Create directories and write configs
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_IP }}
@@ -110,16 +105,12 @@ jobs:
           script: |
             set -e
             DOMAIN="${{ github.event.inputs.server_domain }}"
-            DEV_HOME="$HOME"
-            USER="${{ secrets.USER_NAME }}"
 
-            echo "=== [1/3] Creating application directories ==="
-            mkdir -p "$DEV_HOME/family_chat/config"
-            mkdir -p "$DEV_HOME/family_chat/migrations"
-            mkdir -p "$DEV_HOME/family_chat/data"
+            echo "=== [1/3] Creating directories ==="
+            mkdir -p ~/family_chat/config ~/family_chat/nginx ~/family_chat/migrations
 
             echo "=== [2/3] Writing production.yaml ==="
-            cat > "$DEV_HOME/family_chat/config/production.yaml" << EOF
+            cat > ~/family_chat/config/production.yaml << EOF
             apiServer:
               port: 8080
               publicHost: $DOMAIN
@@ -139,7 +130,7 @@ jobs:
               publicScheme: https
 
             database:
-              host: localhost
+              host: db
               port: 5432
               name: family_chat_db
               user: family_chat_user
@@ -154,146 +145,7 @@ jobs:
               consoleEnabled: true
             EOF
 
-            echo "=== [3/3] Creating systemd service ==="
-            sudo tee /etc/systemd/system/family-chat.service > /dev/null << EOF
-            [Unit]
-            Description=FamilyChat Server (Serverpod)
-            After=network.target postgresql.service
-            Wants=postgresql.service
-
-            [Service]
-            Type=simple
-            User=$USER
-            WorkingDirectory=$DEV_HOME/family_chat
-            ExecStart=$DEV_HOME/family_chat/family_chat_server_bin --mode production --apply-migrations
-            Restart=always
-            RestartSec=5
-            StandardOutput=journal
-            StandardError=journal
-            SyslogIdentifier=family-chat
-            Environment="ADMIN_EMAIL=${{ github.event.inputs.admin_email }}"
-            Environment="ADMIN_INITIAL_PASSWORD=${{ github.event.inputs.admin_password }}"
-
-            [Install]
-            WantedBy=multi-user.target
-            EOF
-
-            sudo systemctl daemon-reload
-            sudo systemctl enable family-chat
-            echo "  => systemd service enabled"
-
-            echo "=== Configuring Nginx ==="
-            sudo tee /etc/nginx/sites-available/family-chat > /dev/null << 'NGINX'
-            map $http_upgrade $connection_upgrade {
-                default upgrade;
-                ''      close;
-            }
-
-            server {
-                listen 80;
-                server_name DOMAIN_PLACEHOLDER;
-                return 301 https://$host$request_uri;
-            }
-
-            server {
-                listen 443 ssl;
-                server_name DOMAIN_PLACEHOLDER;
-
-                ssl_certificate /etc/letsencrypt/live/DOMAIN_PLACEHOLDER/fullchain.pem;
-                ssl_certificate_key /etc/letsencrypt/live/DOMAIN_PLACEHOLDER/privkey.pem;
-                ssl_protocols TLSv1.2 TLSv1.3;
-                ssl_ciphers HIGH:!aNULL:!MD5;
-                ssl_prefer_server_ciphers on;
-                ssl_session_cache shared:SSL:10m;
-                ssl_session_timeout 10m;
-
-                location / {
-                    proxy_pass http://127.0.0.1:8080;
-                    proxy_http_version 1.1;
-                    proxy_set_header Upgrade $http_upgrade;
-                    proxy_set_header Connection $connection_upgrade;
-                    proxy_set_header Host $proxy_host;
-                    proxy_set_header X-Real-IP $remote_addr;
-                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                    proxy_set_header X-Forwarded-Proto $scheme;
-                    proxy_read_timeout 86400s;
-                    proxy_send_timeout 86400s;
-                    client_max_body_size 25m;
-                    proxy_buffer_size 128k;
-                    proxy_buffers 4 256k;
-                    proxy_busy_buffers_size 256k;
-                }
-            }
-            NGINX
-
-            sudo sed -i "s/DOMAIN_PLACEHOLDER/$DOMAIN/g" /etc/nginx/sites-available/family-chat
-            sudo rm -f /etc/nginx/sites-enabled/default
-            sudo ln -sf /etc/nginx/sites-available/family-chat /etc/nginx/sites-enabled/family-chat
-            sudo nginx -t
-            echo "  => Nginx configured (SSL not yet obtained)"
-
-  # ────────────────────────────────────────────────────────────────
-  # Шаг 3: Получить SSL-сертификат
-  # ────────────────────────────────────────────────────────────────
-  obtain-ssl:
-    name: Obtain SSL Certificate
-    runs-on: ubuntu-latest
-    needs: setup-vps
-    steps:
-      - name: Get Let's Encrypt certificate
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.VPS_IP }}
-          username: ${{ secrets.USER_NAME }}
-          key: ${{ secrets.VPS_SERVER_KEY }}
-          script: |
-            set -e
-            DOMAIN="${{ github.event.inputs.server_domain }}"
-            ADMIN_EMAIL="${{ github.event.inputs.admin_email }}"
-
-            sudo systemctl stop nginx
-            sudo certbot certonly --standalone \
-              --non-interactive \
-              --agree-tos \
-              --email "$ADMIN_EMAIL" \
-              -d "$DOMAIN"
-            sudo systemctl start nginx
-            sudo nginx -t && sudo systemctl reload nginx
-            echo "  => SSL certificate obtained for $DOMAIN"
-
-  # ────────────────────────────────────────────────────────────────
-  # Шаг 4a + 4b: Сборка сервера и Flutter — параллельно
-  # ────────────────────────────────────────────────────────────────
-  first-server-deploy:
-    name: Build & Deploy Server
-    runs-on: ubuntu-latest
-    needs: obtain-ssl
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.32.8'
-          cache: true
-
-      - name: Compile Serverpod server
-        working-directory: family_chat_sp_server
-        run: |
-          flutter pub get
-          dart compile exe bin/main.dart -o family_chat_server_bin
-
-      - name: Patch production.yaml with domain
-        working-directory: family_chat_sp_server
-        run: |
-          sed -i "s/DOMAIN_PLACEHOLDER/${{ github.event.inputs.server_domain }}/g" config/production.yaml
-
-      - name: Write passwords.yaml on VPS
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.VPS_IP }}
-          username: ${{ secrets.USER_NAME }}
-          key: ${{ secrets.VPS_SERVER_KEY }}
-          script: |
+            echo "=== [3/3] Writing passwords.yaml ==="
             cat > ~/family_chat/config/passwords.yaml << 'YAML'
             production:
               database: '${{ secrets.DB_PASSWORD }}'
@@ -304,41 +156,131 @@ jobs:
             YAML
             chmod 600 ~/family_chat/config/passwords.yaml
 
-      - name: Copy binary, config & migrations to VPS
+            echo "  => Config files written"
+
+      - name: Copy nginx configs
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VPS_IP }}
           username: ${{ secrets.USER_NAME }}
           key: ${{ secrets.VPS_SERVER_KEY }}
-          source: >-
-            family_chat_sp_server/family_chat_server_bin,
-            family_chat_sp_server/config/production.yaml,
-            family_chat_sp_server/migrations/
+          source: "nginx/nginx.conf,nginx/nginx.ssl.conf"
           target: ~/family_chat/
-          strip_components: 1
 
-      - name: Start server & verify
+      - name: Copy docker-compose.yml
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_IP }}
+          username: ${{ secrets.USER_NAME }}
+          key: ${{ secrets.VPS_SERVER_KEY }}
+          source: "docker-compose.yml"
+          target: ~/family_chat/
+
+  # ────────────────────────────────────────────────────────────────
+  # Job 3: Сборка Docker image и push в ghcr.io
+  # ────────────────────────────────────────────────────────────────
+  build-and-push:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+    needs: bootstrap-root
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build Docker image
+        run: docker build -t ghcr.io/${{ github.repository }}:latest .
+
+      - name: Push Docker image
+        run: docker push ghcr.io/${{ github.repository }}:latest
+
+  # ────────────────────────────────────────────────────────────────
+  # Job 4: Получить SSL-сертификат через certbot
+  # ────────────────────────────────────────────────────────────────
+  obtain-ssl:
+    name: Obtain SSL Certificate
+    runs-on: ubuntu-latest
+    needs: setup-config
+    steps:
+      - name: Start nginx (HTTP only) and get certificate
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_IP }}
           username: ${{ secrets.USER_NAME }}
           key: ${{ secrets.VPS_SERVER_KEY }}
           script: |
-            chmod +x ~/family_chat/family_chat_server_bin
-            sudo systemctl start family-chat
-            sleep 5
-            sudo systemctl status family-chat --no-pager -l
-            echo ""
-            sudo journalctl -u family-chat -n 30 --no-pager
+            set -e
+            DOMAIN="${{ github.event.inputs.server_domain }}"
+            ADMIN_EMAIL="${{ github.event.inputs.admin_email }}"
 
+            cd ~/family_chat
+
+            echo "=== [1/3] Starting nginx (HTTP only for certbot challenge) ==="
+            docker compose up -d nginx
+
+            echo "=== [2/3] Obtaining SSL certificate ==="
+            docker compose run --rm certbot certbot certonly \
+              --webroot \
+              --webroot-path=/var/www/certbot \
+              --non-interactive \
+              --agree-tos \
+              --email "$ADMIN_EMAIL" \
+              -d "$DOMAIN"
+
+            echo "=== [3/3] Switching to SSL config ==="
+            cp ~/family_chat/nginx/nginx.ssl.conf ~/family_chat/nginx/nginx.conf
+            sed -i "s/DOMAIN_PLACEHOLDER/$DOMAIN/g" ~/family_chat/nginx/nginx.conf
+
+            docker compose restart nginx
+            echo "  => SSL certificate obtained for $DOMAIN"
+
+  # ────────────────────────────────────────────────────────────────
+  # Job 5: Полный запуск всего стека
+  # ────────────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy Full Stack
+    runs-on: ubuntu-latest
+    needs: [obtain-ssl, build-and-push]
+    steps:
+      - name: Deploy with docker compose
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_IP }}
+          username: ${{ secrets.USER_NAME }}
+          key: ${{ secrets.VPS_SERVER_KEY }}
+          script: |
+            set -e
+            cd ~/family_chat
+
+            echo "=== [1/3] Writing .env ==="
+            cat > .env << EOF
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            ADMIN_EMAIL=${{ github.event.inputs.admin_email }}
+            ADMIN_INITIAL_PASSWORD=${{ github.event.inputs.admin_password }}
+            GITHUB_REPOSITORY=${{ github.repository }}
+            EOF
+            chmod 600 .env
+
+            echo "=== [2/3] Pulling and starting containers ==="
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            docker compose pull
+            docker compose up -d
+
+            echo "=== [3/3] Verifying ==="
+            sleep 10
+            docker compose ps
+            echo ""
+            echo "=== App logs (last 50 lines) ==="
+            docker compose logs app --tail=50
+
+  # ────────────────────────────────────────────────────────────────
+  # Job 6: Flutter Web → GitHub Pages (параллельно с deploy)
+  # ────────────────────────────────────────────────────────────────
   first-flutter-deploy:
     name: Build & Deploy Flutter Web
     runs-on: ubuntu-latest
     needs: obtain-ssl
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

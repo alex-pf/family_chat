@@ -1,7 +1,7 @@
 name: Deploy FamilyChat
 
 # Запускается при каждом push в main или вручную.
-# Предполагает, что сервер уже настроен через "First Deploy — VPS Setup".
+# Предполагает, что сервер уже настроен через "First Deploy — Docker Setup".
 on:
   push:
     branches:
@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: read
+  packages: write
   pages: write
   id-token: write
 
@@ -53,81 +54,38 @@ jobs:
         id: deployment
 
   # ────────────────────────────────────────────────────────────────
-  # Job 2: Build Dart Server → Deploy to VPS
+  # Job 2: Build Docker image → Push to ghcr.io → Deploy on VPS
   # ────────────────────────────────────────────────────────────────
   deploy-server:
-    name: Serverpod Server → VPS
+    name: Serverpod Server → VPS (Docker)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
 
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.32.8'
-          cache: true
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-      - name: Compile Serverpod server
-        working-directory: family_chat_sp_server
+      - name: Build and push Docker image
         run: |
-          flutter pub get
-          dart compile exe bin/main.dart -o family_chat_server_bin
+          docker build -t ghcr.io/${{ github.repository }}:latest .
+          docker push ghcr.io/${{ github.repository }}:latest
 
-      - name: Patch production.yaml with domain
-        working-directory: family_chat_sp_server
-        run: |
-          sed -i "s/DOMAIN_PLACEHOLDER/${{ secrets.SERVER_DOMAIN }}/g" config/production.yaml
-
-      - name: Prepare directories on VPS
+      - name: Deploy on VPS
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_IP }}
           username: ${{ secrets.USER_NAME }}
           key: ${{ secrets.VPS_SERVER_KEY }}
           script: |
-            mkdir -p ~/family_chat/config
-            mkdir -p ~/family_chat/migrations
+            set -e
+            cd ~/family_chat
 
-      - name: Write passwords.yaml on VPS
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.VPS_IP }}
-          username: ${{ secrets.USER_NAME }}
-          key: ${{ secrets.VPS_SERVER_KEY }}
-          script: |
-            cat > ~/family_chat/config/passwords.yaml << 'YAML'
-            production:
-              database: '${{ secrets.DB_PASSWORD }}'
-              serviceSecret: '${{ secrets.SERVICE_SECRET }}'
-              emailSecretHashPepper: '${{ secrets.EMAIL_PEPPER }}'
-              jwtHmacSha512PrivateKey: '${{ secrets.JWT_PRIVATE_KEY }}'
-              jwtRefreshTokenHashPepper: '${{ secrets.JWT_REFRESH_PEPPER }}'
-            YAML
-            chmod 600 ~/family_chat/config/passwords.yaml
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            docker compose pull
+            docker compose up -d --remove-orphans
 
-      - name: Copy binary, config & migrations to VPS
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.VPS_IP }}
-          username: ${{ secrets.USER_NAME }}
-          key: ${{ secrets.VPS_SERVER_KEY }}
-          source: >-
-            family_chat_sp_server/family_chat_server_bin,
-            family_chat_sp_server/config/production.yaml,
-            family_chat_sp_server/migrations/
-          target: ~/family_chat/
-          strip_components: 1
-
-      - name: Restart server & verify
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.VPS_IP }}
-          username: ${{ secrets.USER_NAME }}
-          key: ${{ secrets.VPS_SERVER_KEY }}
-          script: |
-            chmod +x ~/family_chat/family_chat_server_bin
-            sudo systemctl restart family-chat
-            sleep 5
-            sudo systemctl status family-chat --no-pager -l
+            sleep 10
+            docker compose ps
             echo ""
-            echo "=== Last 30 log lines ==="
-            sudo journalctl -u family-chat -n 30 --no-pager
+            echo "=== App logs (last 30 lines) ==="
+            docker compose logs app --tail=30
