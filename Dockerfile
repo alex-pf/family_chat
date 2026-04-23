@@ -5,9 +5,12 @@ WORKDIR /workspace
 COPY pubspec.yaml ./
 COPY family_chat_sp_client/ ./family_chat_sp_client/
 COPY family_chat_sp_server/ ./family_chat_sp_server/
-# Flutter package is in the workspace but not needed for server build;
-# create a minimal stub so workspace resolution succeeds
-COPY family_chat_sp_flutter/pubspec.yaml ./family_chat_sp_flutter/
+# Flutter package is listed in the workspace but not needed for server build.
+# We create a minimal stub pubspec without Flutter SDK deps so that
+# `dart pub get` (no Flutter SDK in this image) can resolve the workspace.
+RUN mkdir -p family_chat_sp_flutter && \
+    printf 'name: family_chat_sp_flutter\npublish_to: none\nenvironment:\n  sdk: "^3.8.0"\nresolution: workspace\n' \
+    > family_chat_sp_flutter/pubspec.yaml
 RUN dart pub get
 WORKDIR /workspace/family_chat_sp_server
 RUN dart compile exe bin/main.dart -o family_chat_server_bin
