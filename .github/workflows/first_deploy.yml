@@ -182,8 +182,18 @@ jobs:
             sleep 5
 
             echo "=== [2/3] Obtaining SSL certificate ==="
-            # Запускаем certbot одноразово (--no-deps чтобы не тянуть app/db)
-            docker compose run --rm --no-deps certbot certbot certonly \
+            # Получаем volume names для certbot (созданы docker compose)
+            CERTBOT_WWW=$(docker volume ls -q | grep certbot_www | head -1)
+            CERTBOT_CERTS=$(docker volume ls -q | grep certbot_certs | head -1)
+            # Если volumes ещё не созданы — создадим явно
+            docker volume create family_chat_certbot_www 2>/dev/null || true
+            docker volume create family_chat_certbot_certs 2>/dev/null || true
+            # Запускаем certbot напрямую через docker run (не через compose)
+            # чтобы не задействовать entrypoint с бесконечным циклом
+            docker run --rm \
+              -v family_chat_certbot_www:/var/www/certbot \
+              -v family_chat_certbot_certs:/etc/letsencrypt \
+              certbot/certbot certonly \
               --webroot \
               --webroot-path=/var/www/certbot \
               --non-interactive \
