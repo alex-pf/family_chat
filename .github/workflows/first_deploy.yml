@@ -174,11 +174,16 @@ jobs:
 
             cd ~/family_chat
 
-            echo "=== [1/3] Starting nginx (HTTP only for certbot challenge) ==="
-            docker compose up -d nginx
+            echo "=== [1/3] Starting nginx only (HTTP, for certbot challenge) ==="
+            # --no-deps: запускаем только nginx без db/app
+            docker compose up -d --no-deps nginx
+
+            # Ждём пока nginx поднимется
+            sleep 5
 
             echo "=== [2/3] Obtaining SSL certificate ==="
-            docker compose run --rm certbot certbot certonly \
+            # Запускаем certbot одноразово (--no-deps чтобы не тянуть app/db)
+            docker compose run --rm --no-deps certbot certbot certonly \
               --webroot \
               --webroot-path=/var/www/certbot \
               --non-interactive \
@@ -190,7 +195,8 @@ jobs:
             cp ~/family_chat/nginx/nginx.ssl.conf ~/family_chat/nginx/nginx.conf
             sed -i "s/DOMAIN_PLACEHOLDER/$DOMAIN/g" ~/family_chat/nginx/nginx.conf
 
-            docker compose restart nginx
+            # Останавливаем nginx — полный стек поднимет шаг deploy
+            docker compose stop nginx
             echo "  => SSL certificate obtained for $DOMAIN"
 
   # ────────────────────────────────────────────────────────────────
