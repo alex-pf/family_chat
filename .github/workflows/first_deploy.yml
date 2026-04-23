@@ -175,6 +175,8 @@ jobs:
             cd ~/family_chat
 
             echo "=== [1/3] Starting nginx only (HTTP, for certbot challenge) ==="
+            # Останавливаем всё что могло остаться от предыдущего запуска
+            docker compose down --remove-orphans 2>/dev/null || true
             # --no-deps: запускаем только nginx без db/app
             docker compose up -d --no-deps nginx
 
