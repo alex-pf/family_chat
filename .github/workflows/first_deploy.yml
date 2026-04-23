@@ -106,6 +106,15 @@ jobs:
             YAML
             chmod 600 ~/family_chat/config/passwords.yaml
 
+            echo "=== [4/4] Writing .env for docker compose ==="
+            cat > ~/family_chat/.env << EOF
+DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+ADMIN_EMAIL=${{ github.event.inputs.admin_email }}
+ADMIN_INITIAL_PASSWORD=${{ github.event.inputs.admin_password }}
+GITHUB_REPOSITORY=${{ github.repository }}
+EOF
+            chmod 600 ~/family_chat/.env
+
             echo "  => Config files written"
 
       - name: Copy nginx configs
@@ -202,21 +211,12 @@ jobs:
             set -e
             cd ~/family_chat
 
-            echo "=== [1/3] Writing .env ==="
-            cat > .env << EOF
-            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-            ADMIN_EMAIL=${{ github.event.inputs.admin_email }}
-            ADMIN_INITIAL_PASSWORD=${{ github.event.inputs.admin_password }}
-            GITHUB_REPOSITORY=${{ github.repository }}
-            EOF
-            chmod 600 .env
-
-            echo "=== [2/3] Pulling and starting containers ==="
+            echo "=== [1/3] Pulling and starting containers ==="
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             docker compose pull
             docker compose up -d
 
-            echo "=== [3/3] Verifying ==="
+            echo "=== [2/3] Verifying ==="
             sleep 10
             docker compose ps
             echo ""
