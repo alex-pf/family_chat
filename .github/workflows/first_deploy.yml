@@ -107,12 +107,12 @@ jobs:
             chmod 600 ~/family_chat/config/passwords.yaml
 
             echo "=== [4/4] Writing .env for docker compose ==="
-            cat > ~/family_chat/.env << EOF
-DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-ADMIN_EMAIL=${{ github.event.inputs.admin_email }}
-ADMIN_INITIAL_PASSWORD=${{ github.event.inputs.admin_password }}
-GITHUB_REPOSITORY=${{ github.repository }}
-EOF
+            printf 'DB_PASSWORD=%s\nADMIN_EMAIL=%s\nADMIN_INITIAL_PASSWORD=%s\nGITHUB_REPOSITORY=%s\n' \
+              '${{ secrets.DB_PASSWORD }}' \
+              '${{ github.event.inputs.admin_email }}' \
+              '${{ github.event.inputs.admin_password }}' \
+              '${{ github.repository }}' \
+              > ~/family_chat/.env
             chmod 600 ~/family_chat/.env
 
             echo "  => Config files written"
